@@ -36,7 +36,8 @@ export const SignUpBody = zod.object({
 })
 
 export const SignUpResponse = zod.object({
-  "message": zod.string()
+  "message": zod.string(),
+  "verificationUrl": zod.string().url().optional()
 })
 
 

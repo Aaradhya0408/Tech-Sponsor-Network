@@ -63,6 +63,11 @@ export interface AuthMessage {
   message: string;
 }
 
+export interface SignUpResult {
+  message: string;
+  verificationUrl?: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }

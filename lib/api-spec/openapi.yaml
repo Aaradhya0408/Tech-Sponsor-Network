@@ -43,7 +43,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthMessage"
+                $ref: "#/components/schemas/SignUpResult"
         "400":
           description: Invalid input
           content:
@@ -278,6 +278,15 @@ components:
       properties:
         message:
           type: string
+      required: [message]
+    SignUpResult:
+      type: object
+      properties:
+        message:
+          type: string
+        verificationUrl:
+          type: string
+          format: uri
       required: [message]
     ErrorResponse:
       type: object

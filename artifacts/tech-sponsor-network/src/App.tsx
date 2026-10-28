@@ -179,12 +179,16 @@ function Login() {
 function Signup() {
   const signup = useSignUp();
   const [message, setMessage] = useState('');
+  const [verificationUrl, setVerificationUrl] = useState('');
   const [error, setError] = useState('');
   function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setMessage(''); setError('');
+    event.preventDefault(); setMessage(''); setVerificationUrl(''); setError('');
     const form = new FormData(event.currentTarget);
     signup.mutate({ data: { name: String(form.get('name')).trim(), email: String(form.get('email')).trim(), password: String(form.get('password')) } }, {
-      onSuccess: response => setMessage(response.message),
+      onSuccess: response => {
+        setMessage(response.message);
+        setVerificationUrl(response.verificationUrl ?? '');
+      },
       onError: err => setError(errorText(err)),
     });
   }
@@ -193,8 +197,9 @@ function Signup() {
       <FormField label="Your name" name="name" type="text" placeholder="Name you work under" autoComplete="name" icon={<CircleUserRound size={16} />} />
       <FormField label="Email address" name="email" type="email" placeholder="you@studio.com" autoComplete="email" icon={<Mail size={16} />} />
       <FormField label="Password" name="password" type="password" placeholder="At least 10 characters" autoComplete="new-password" icon={<LockKeyhole size={16} />} minLength={10} />
-      <div className="flex gap-2.5 rounded-xl border border-[#d7d7c7] bg-[#f0efe7] p-3.5 text-xs leading-5 text-muted-foreground"><Mail size={16} className="mt-0.5 shrink-0 text-primary" /><p><strong className="font-semibold text-foreground">Email verification required.</strong> After signup, follow the verification link printed by the server before signing in.</p></div>
+      <div className="flex gap-2.5 rounded-xl border border-[#d7d7c7] bg-[#f0efe7] p-3.5 text-xs leading-5 text-muted-foreground"><Mail size={16} className="mt-0.5 shrink-0 text-primary" /><p><strong className="font-semibold text-foreground">Email verification required.</strong> After signup, use the development link shown below or the link printed by the server before signing in.</p></div>
       {message && <Notice kind="success" text={message} />}
+      {verificationUrl && <div className="rounded-xl border border-[#bed1c1] bg-[#e7efe6] p-4" data-testid="panel-dev-verification-link"><p className="text-xs font-semibold text-[#315848]">Development verification link</p><a href={verificationUrl} data-testid="link-dev-verification" className="mt-2 inline-flex items-center gap-2 break-all text-sm font-semibold text-primary underline underline-offset-4">Verify your email <ArrowRight size={15} className="shrink-0" /></a></div>}
       {error && <Notice kind="error" text={error} />}
       <button data-testid="button-signup" disabled={signup.isPending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground transition hover:brightness-95 disabled:cursor-wait disabled:opacity-65">
         {signup.isPending ? 'Creating account…' : 'Create account'} {!signup.isPending && <ArrowRight size={16} />}

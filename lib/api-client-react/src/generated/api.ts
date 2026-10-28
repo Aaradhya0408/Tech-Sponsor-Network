@@ -26,6 +26,7 @@ import type {
   HealthStatus,
   LoginInput,
   SignUpInput,
+  SignUpResult,
   VerifyEmailInput
 } from './api.schemas';
 
@@ -145,7 +146,7 @@ export const getSignUpUrl = () => {
 /**
  * @summary Create an account and send a verification link
  */
-export const signUp = async (signUpInput: SignUpInput, options?: Parameters<typeof customFetch>[1]): Promise<AuthMessage> => {
+export const signUp = async (signUpInput: SignUpInput, options?: Parameters<typeof customFetch>[1]): Promise<SignUpResult> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -161,7 +162,7 @@ export const signUp = async (signUpInput: SignUpInput, options?: Parameters<type
     }
     return headers;
   };
-return customFetch<AuthMessage>(getSignUpUrl(),
+return customFetch<SignUpResult>(getSignUpUrl(),
   {
     ...options,
     method: 'POST',

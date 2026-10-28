@@ -191,7 +191,13 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
     .status(201)
     .json(
       SignUpResponse.parse({
-        message: "Account created. Use the verification link printed by the server, then log in.",
+        message:
+          process.env.NODE_ENV === "development"
+            ? "Account created. Use the development verification link below, then log in."
+            : "Account created. Use the verification link printed by the server, then log in.",
+        ...(process.env.NODE_ENV === "development"
+          ? { verificationUrl: verificationUrl.toString() }
+          : {}),
       }),
     );
 });

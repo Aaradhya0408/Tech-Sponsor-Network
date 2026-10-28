@@ -13,4 +13,5 @@ export * from './errorResponse';
 export * from './healthStatus';
 export * from './loginInput';
 export * from './signUpInput';
+export * from './signUpResult';
 export * from './verifyEmailInput';
