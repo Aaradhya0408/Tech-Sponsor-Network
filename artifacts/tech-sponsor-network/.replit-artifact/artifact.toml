@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Tech Sponsor Network"
+description = "A responsive platform entry point for creators and administrators, with email-verified account signup, secure login, and role-specific dashboards."
+version = "1.0.0"
+id = "artifacts/tech-sponsor-network"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25313
+
+[services.development]
+run = "pnpm --filter @workspace/tech-sponsor-network run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tech-sponsor-network", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tech-sponsor-network/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25313"
+BASE_PATH = "/"
