@@ -119,7 +119,7 @@ async function getSessionUser(req: Request): Promise<UserRecord | null> {
   return session?.user ?? null;
 }
 
-function requireRole(role: "CREATOR" | "ADMIN") {
+export function requireRole(role: "CREATOR" | "ADMIN") {
   return async (
     req: Request,
     res: Response,

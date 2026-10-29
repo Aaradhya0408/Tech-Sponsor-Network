@@ -185,6 +185,19 @@ test("signup, verification, role access, and logout stay isolated", async () => 
     });
     assert.equal(expiredVerification.response.status, 400);
 
+    await db.query(
+      "UPDATE tech_sponsor_users SET email_verified = true WHERE email = $1",
+      [expiredEmail],
+    );
+    const otherCreatorLogin = await request("/auth/login", {
+      method: "POST",
+      body: {
+        email: expiredEmail,
+        password: "safe-test-password-123",
+      },
+    });
+    assert.equal(otherCreatorLogin.response.status, 200);
+
     const creatorLogin = await request("/auth/login", {
       method: "POST",
       body: { email: creatorEmail, password: "safe-test-password-123" },
@@ -201,6 +214,74 @@ test("signup, verification, role access, and logout stay isolated", async () => 
       cookie: creatorLogin.cookie,
     });
     assert.equal(creatorToAdmin.response.status, 403);
+
+    const initialProfile = await request("/creator/profile", {
+      cookie: creatorLogin.cookie,
+    });
+    assert.equal(initialProfile.response.status, 200);
+    assert.match(initialProfile.body.proofCode, /^TSN-[0-9]{4}$/);
+    assert.equal(initialProfile.body.approvalStatus, "PENDING_APPROVAL");
+
+    const otherInitialProfile = await request("/creator/profile", {
+      cookie: otherCreatorLogin.cookie,
+    });
+    assert.equal(otherInitialProfile.response.status, 200);
+    assert.notEqual(
+      otherInitialProfile.body.userId,
+      initialProfile.body.userId,
+      "each creator receives a profile tied to their own account",
+    );
+
+    const creatorToProfiles = await request("/admin/creator-profiles", {
+      cookie: creatorLogin.cookie,
+    });
+    assert.equal(creatorToProfiles.response.status, 403);
+
+    const invalidCountry = await request("/creator/profile", {
+      method: "PUT",
+      cookie: creatorLogin.cookie,
+      body: {
+        displayName: "Auth Test Creator",
+        bio: "Technology creator.",
+        country: "AA",
+        niche: "AI",
+        platforms: [],
+      },
+    });
+    assert.equal(invalidCountry.response.status, 400);
+
+    const profileInput = {
+      displayName: "Auth Test Creator",
+      bio: "Technology creator.",
+      country: "IN",
+      niche: "AI",
+      platforms: [
+        {
+          platform: "YouTube",
+          url: "https://youtube.com/@auth-test-creator",
+          followers: 4200,
+        },
+      ],
+    };
+    const savedProfile = await request("/creator/profile", {
+      method: "PUT",
+      cookie: creatorLogin.cookie,
+      body: profileInput,
+    });
+    assert.equal(savedProfile.response.status, 200);
+    assert.equal(savedProfile.body.completeness, 100);
+    assert.equal(savedProfile.body.proofCode, initialProfile.body.proofCode);
+    assert.equal(savedProfile.body.approvalStatus, "PENDING_APPROVAL");
+    assert.equal(savedProfile.body.platforms[0].verified, false);
+
+    const otherCreatorStillOwnsProfile = await request("/creator/profile", {
+      cookie: otherCreatorLogin.cookie,
+    });
+    assert.equal(
+      otherCreatorStillOwnsProfile.body.userId,
+      otherInitialProfile.body.userId,
+    );
+    assert.deepEqual(otherCreatorStillOwnsProfile.body.platforms, []);
 
     const adminVerification = await request("/auth/verify", {
       method: "POST",
@@ -221,6 +302,132 @@ test("signup, verification, role access, and logout stay isolated", async () => 
       cookie: adminLogin.cookie,
     });
     assert.equal(adminToCreator.response.status, 403);
+
+    const adminToCreatorProfile = await request("/creator/profile", {
+      cookie: adminLogin.cookie,
+    });
+    assert.equal(adminToCreatorProfile.response.status, 403);
+
+    const creatorList = await request("/admin/creator-profiles", {
+      cookie: adminLogin.cookie,
+    });
+    assert.equal(creatorList.response.status, 200);
+    const creatorRecord = creatorList.body.creators.find(
+      (item) => item.email === creatorEmail,
+    );
+    assert.ok(creatorRecord, "admin can view the creator's profile");
+    assert.equal(creatorRecord.approvalStatus, "PENDING_APPROVAL");
+
+    const verifyPlatform = await request(
+      `/admin/creator-profiles/${creatorRecord.userId}/platforms/YouTube/verification`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { verified: true },
+      },
+    );
+    assert.equal(verifyPlatform.response.status, 200);
+
+    const savedSamePlatform = await request("/creator/profile", {
+      method: "PUT",
+      cookie: creatorLogin.cookie,
+      body: {
+        ...profileInput,
+        platforms: [
+          {
+            ...profileInput.platforms[0],
+            followers: 5000,
+          },
+        ],
+      },
+    });
+    assert.equal(savedSamePlatform.response.status, 200);
+    assert.equal(
+      savedSamePlatform.body.platforms[0].verified,
+      true,
+      "follower-count edits preserve verification for the same link",
+    );
+
+    const changedPlatformLink = await request("/creator/profile", {
+      method: "PUT",
+      cookie: creatorLogin.cookie,
+      body: {
+        ...profileInput,
+        platforms: [
+          {
+            ...profileInput.platforms[0],
+            url: "https://youtube.com/@auth-test-creator-updated",
+          },
+        ],
+      },
+    });
+    assert.equal(changedPlatformLink.response.status, 200);
+    assert.equal(
+      changedPlatformLink.body.platforms[0].verified,
+      false,
+      "changing a profile URL clears its previous verification",
+    );
+
+    const rejectWithoutReason = await request(
+      `/admin/creator-profiles/${creatorRecord.userId}/approval`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "REJECTED" },
+      },
+    );
+    assert.equal(rejectWithoutReason.response.status, 400);
+
+    const rejected = await request(
+      `/admin/creator-profiles/${creatorRecord.userId}/approval`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: {
+          status: "REJECTED",
+          reason: "Please add your proof code to your bio.",
+        },
+      },
+    );
+    assert.equal(rejected.response.status, 200);
+
+    const creatorSeesRejection = await request("/creator/profile", {
+      cookie: creatorLogin.cookie,
+    });
+    assert.equal(creatorSeesRejection.body.approvalStatus, "REJECTED");
+    assert.equal(
+      creatorSeesRejection.body.rejectionReason,
+      "Please add your proof code to your bio.",
+    );
+
+    const resubmitted = await request("/creator/profile", {
+      method: "PUT",
+      cookie: creatorLogin.cookie,
+      body: { ...profileInput, bio: "Updated creator bio." },
+    });
+    assert.equal(resubmitted.response.status, 200);
+    assert.equal(resubmitted.body.approvalStatus, "PENDING_APPROVAL");
+    assert.equal(resubmitted.body.rejectionReason, null);
+
+    const approved = await request(
+      `/admin/creator-profiles/${creatorRecord.userId}/approval`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "APPROVED" },
+      },
+    );
+    assert.equal(approved.response.status, 200);
+
+    const finalCreatorList = await request("/admin/creator-profiles", {
+      cookie: adminLogin.cookie,
+    });
+    assert.equal(
+      finalCreatorList.body.creators.find(
+        (item) => item.email === creatorEmail,
+      )?.approvalStatus,
+      "APPROVED",
+    );
 
     const logout = await request("/auth/logout", {
       method: "POST",

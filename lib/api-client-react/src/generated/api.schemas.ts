@@ -68,6 +68,150 @@ export interface SignUpResult {
   verificationUrl?: string;
 }
 
+/**
+ * ISO-style two-letter country or territory code
+ * @minLength 2
+ * @maxLength 2
+ * @pattern ^[A-Z]{2}$
+ */
+export type CreatorCountry = string;
+
+/**
+ * ISO-style two-letter country or territory code, or empty before profile setup
+ * @maxLength 2
+ * @pattern ^([A-Z]{2})?$
+ */
+export type CreatorCountryValue = string;
+
+export type CreatorNiche = typeof CreatorNiche[keyof typeof CreatorNiche];
+
+
+export const CreatorNiche = {
+  Technology: 'Technology',
+  AI: 'AI',
+  Developer_tools: 'Developer tools',
+  Gaming: 'Gaming',
+  Education: 'Education',
+  Business: 'Business',
+  Other: 'Other',
+} as const;
+
+export type CreatorPlatform = typeof CreatorPlatform[keyof typeof CreatorPlatform];
+
+
+export const CreatorPlatform = {
+  Instagram: 'Instagram',
+  YouTube: 'YouTube',
+  LinkedIn: 'LinkedIn',
+  X: 'X',
+  TikTok: 'TikTok',
+  GitHub: 'GitHub',
+} as const;
+
+export type CreatorApprovalStatus = typeof CreatorApprovalStatus[keyof typeof CreatorApprovalStatus];
+
+
+export const CreatorApprovalStatus = {
+  PENDING_APPROVAL: 'PENDING_APPROVAL',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+} as const;
+
+export type CreatorApprovalDecision = typeof CreatorApprovalDecision[keyof typeof CreatorApprovalDecision];
+
+
+export const CreatorApprovalDecision = {
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+} as const;
+
+export interface CreatorPlatformInput {
+  platform: CreatorPlatform;
+  /** @maxLength 2048 */
+  url: string;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  followers: number;
+}
+
+export interface CreatorProfileInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  displayName: string;
+  /** @maxLength 300 */
+  bio: string;
+  country: CreatorCountry;
+  niche: CreatorNiche;
+  /** @maxItems 6 */
+  platforms: CreatorPlatformInput[];
+}
+
+export interface CreatorPlatformProfile {
+  platform: CreatorPlatform;
+  url: string;
+  /** @minimum 0 */
+  followers: number;
+  verified: boolean;
+}
+
+export interface CreatorProfile {
+  userId: string;
+  displayName: string;
+  bio: string;
+  country: CreatorCountryValue;
+  niche: string;
+  /** @pattern ^TSN-[0-9]{4}$ */
+  proofCode: string;
+  approvalStatus: CreatorApprovalStatus;
+  /** @nullable */
+  rejectionReason: string | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  completeness: number;
+  platforms: CreatorPlatformProfile[];
+}
+
+export interface AdminCreatorProfile {
+  userId: string;
+  userName: string;
+  email: string;
+  displayName: string;
+  bio: string;
+  country: CreatorCountryValue;
+  niche: string;
+  /** @pattern ^TSN-[0-9]{4}$ */
+  proofCode: string;
+  approvalStatus: CreatorApprovalStatus;
+  /** @nullable */
+  rejectionReason: string | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  completeness: number;
+  platforms: CreatorPlatformProfile[];
+}
+
+export interface AdminCreatorProfiles {
+  creators: AdminCreatorProfile[];
+}
+
+export interface CreatorApprovalInput {
+  status: CreatorApprovalDecision;
+  /** @maxLength 300 */
+  reason?: string;
+}
+
+export interface CreatorPlatformVerificationInput {
+  verified: boolean;
+}
+
 export interface ErrorResponse {
   error: string;
 }

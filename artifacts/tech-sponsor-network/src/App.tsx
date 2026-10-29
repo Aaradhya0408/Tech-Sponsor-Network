@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { ArrowDownRight, ArrowRight, Check, CheckCircle2, CircleUserRound, Compass, Fingerprint, LockKeyhole, LogOut, Mail, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
+import { QueryClient, QueryClientProvider, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { ArrowDownRight, ArrowRight, Check, CheckCircle2, CircleUserRound, Compass, Fingerprint, LockKeyhole, LogOut, Mail, ShieldCheck, Sparkles, UsersRound, Plus, Trash2, ExternalLink, Search, Clock3, BadgeCheck, RotateCcw, Save, Globe2, X } from 'lucide-react';
 import { Link, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import {
   getGetCurrentUserQueryKey,
@@ -12,12 +12,20 @@ import {
   useResendVerificationLink,
   useSignUp,
   useVerifyEmail,
+  getGetCreatorProfileQueryKey,
+  getListAdminCreatorProfilesQueryKey,
+  useGetCreatorProfile,
+  useUpdateCreatorProfile,
+  useListAdminCreatorProfiles,
+  useUpdateCreatorApproval,
+  useUpdateCreatorPlatformVerification,
 } from '@workspace/api-client-react';
-import type { AuthUser } from '@workspace/api-client-react';
+import type { AuthUser, CreatorProfileInput, CreatorPlatform, CreatorNiche, CreatorProfile, AdminCreatorProfile, AdminCreatorProfiles } from '@workspace/api-client-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import { COUNTRY_OPTIONS } from '@/lib/countries';
 
 const queryClient = new QueryClient();
 
@@ -298,6 +306,8 @@ function Dashboard({ admin = false }: { admin?: boolean }) {
   const me = useGetCurrentUser({ query: { queryKey: getGetCurrentUserQueryKey(), retry: false } });
   const creator = useGetCreatorDashboard({ query: { enabled: !!me.data && !admin, retry: false, queryKey: ['/api/auth/creator/dashboard'] } });
   const adminData = useGetAdminDashboard({ query: { enabled: !!me.data && admin, retry: false, queryKey: ['/api/auth/admin/dashboard'] } });
+  const creatorProfile = useGetCreatorProfile({ query: { enabled: !!me.data && !admin, queryKey: getGetCreatorProfileQueryKey(), retry: false } });
+  const adminProfiles = useListAdminCreatorProfiles({ query: { enabled: !!me.data && admin, queryKey: getListAdminCreatorProfilesQueryKey(), retry: false } });
   const logout = useLogOut();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -322,24 +332,256 @@ function Dashboard({ admin = false }: { admin?: boolean }) {
     logout.mutate(undefined, { onSuccess: () => { queryClient.clear(); setLocation('/login'); }, onError: err => setLogoutError(errorText(err)) });
   };
   return <DashboardShell user={user} admin={admin} onLogout={handleLogout}>
-    <div className="mt-10 grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
-      <article className="rounded-[22px] border border-border bg-card p-6 sm:p-8">
-        <div className="flex items-start justify-between gap-4"><div><div className="eyebrow text-muted-foreground">Account summary</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">Your network profile</h2></div><div className="grid h-11 w-11 place-items-center rounded-2xl bg-secondary text-primary"><CircleUserRound size={21} /></div></div>
-        <div className="mt-7 divide-y divide-border">
-          <SummaryRow label="Full name" value={user.name} />
-          <SummaryRow label="Email address" value={user.email} />
-          <SummaryRow label="Membership" value={admin ? 'Administrator' : 'Creator'} />
-          <SummaryRow label="Email status" value={user.emailVerified ? 'Verified' : 'Awaiting verification'} status={user.emailVerified} />
-          <SummaryRow label="Member since" value={new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })} />
+    {logoutError && <div className="mt-6"><Notice kind="error" text={logoutError} /></div>}
+    {admin
+      ? <AdminReview query={adminProfiles} />
+      : <CreatorProfileEditor query={creatorProfile} />}
+  </DashboardShell>;
+}
+
+const NICHE_OPTIONS: CreatorNiche[] = ['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'];
+const PLATFORM_OPTIONS: CreatorPlatform[] = ['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'];
+
+type PlatformDraft = { platform: CreatorPlatform; url: string; followers: string };
+type CreatorProfileQuery = UseQueryResult<CreatorProfile, Error>;
+
+function CreatorProfileEditor({ query }: { query: CreatorProfileQuery }) {
+  const queryClient = useQueryClient();
+  const saveProfile = useUpdateCreatorProfile();
+  const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
+  const [country, setCountry] = useState('');
+  const [niche, setNiche] = useState<CreatorNiche>('Technology');
+  const [platforms, setPlatforms] = useState<PlatformDraft[]>([]);
+  const [initialized, setInitialized] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [saveMessage, setSaveMessage] = useState('');
+
+  useEffect(() => {
+    if (!query.data || initialized) return;
+    setDisplayName(query.data.displayName);
+    setBio(query.data.bio);
+    setCountry(query.data.country);
+    setNiche((NICHE_OPTIONS.includes(query.data.niche as CreatorNiche) ? query.data.niche : 'Technology') as CreatorNiche);
+    setPlatforms(query.data.platforms.map(item => ({ platform: item.platform, url: item.url, followers: String(item.followers) })));
+    setInitialized(true);
+  }, [query.data, initialized]);
+
+  if (query.isLoading) return <ProfileLoading />;
+  if (query.isError || !query.data) return <div className="mt-8"><InlineError message={errorText(query.error)} onRetry={() => query.refetch()} testId="button-retry-profile" /></div>;
+  const profile = query.data;
+  const ready = Boolean(displayName.trim() && bio.trim() && country && niche);
+  const hasCompletePlatform = platforms.some(item => {
+    const url = item.url.trim();
+    const followersValue = item.followers.trim();
+    const followers = Number(followersValue);
+    if (!url || !followersValue || !Number.isInteger(followers) || followers < 0 || followers > 2147483647) return false;
+    try {
+      const parsedUrl = new URL(url);
+      return ['http:', 'https:'].includes(parsedUrl.protocol) && Boolean(parsedUrl.hostname) && !parsedUrl.username && !parsedUrl.password;
+    } catch {
+      return false;
+    }
+  });
+  const completionItems = [
+    Boolean(displayName.trim()),
+    Boolean(bio.trim()),
+    Boolean(country),
+    Boolean(niche),
+    hasCompletePlatform,
+  ];
+  const completeness = initialized
+    ? completionItems.filter(Boolean).length * 20
+    : profile.completeness;
+  const addablePlatforms = PLATFORM_OPTIONS.filter(platform => !platforms.some(item => item.platform === platform));
+  const updatePlatform = (index: number, key: keyof PlatformDraft, value: string) => setPlatforms(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item));
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSaveError(''); setSaveMessage('');
+    const submittedPlatforms: CreatorProfileInput['platforms'] = [];
+    for (const item of platforms) {
+      const url = item.url.trim();
+      const followersValue = item.followers.trim();
+      if (!url && !followersValue) continue;
+      if (!url || !followersValue) {
+        setSaveError(`Add both a profile link and follower count for ${item.platform}, or remove that channel.`);
+        return;
+      }
+      const followers = Number(followersValue);
+      if (!Number.isInteger(followers) || followers < 0 || followers > 2147483647) {
+        setSaveError(`Enter a whole follower count from 0 to 2,147,483,647 for ${item.platform}.`);
+        return;
+      }
+      try {
+        const parsedUrl = new URL(url);
+        if (!['http:', 'https:'].includes(parsedUrl.protocol) || !parsedUrl.hostname || parsedUrl.username || parsedUrl.password) {
+          setSaveError(`Enter a valid public ${item.platform} profile link.`);
+          return;
+        }
+      } catch {
+        setSaveError(`Enter a valid public ${item.platform} profile link.`);
+        return;
+      }
+      submittedPlatforms.push({ platform: item.platform, url, followers });
+    }
+    const input: CreatorProfileInput = {
+      displayName: displayName.trim(),
+      bio: bio.trim(),
+      country,
+      niche,
+      platforms: submittedPlatforms,
+    };
+    saveProfile.mutate({ data: input }, {
+      onSuccess: () => {
+        setSaveMessage(profile.approvalStatus === 'REJECTED' ? 'Your updated profile is saved and back in the review queue.' : 'Your profile is saved.');
+        queryClient.invalidateQueries({ queryKey: getGetCreatorProfileQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListAdminCreatorProfilesQueryKey() });
+      },
+      onError: error => setSaveError(errorText(error)),
+    });
+  };
+  return <div className="page-enter mt-8 space-y-5">
+    <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-stretch">
+      <div className="rounded-[22px] border border-border bg-card p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div><div className="eyebrow text-muted-foreground">Creator profile</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">{profile.displayName || 'Your profile, your terms'}</h2><p className="mt-1 text-sm text-muted-foreground">A clear snapshot helps the right technology partners find you.</p></div>
+          <ApprovalBadge status={profile.approvalStatus} />
         </div>
-        {logoutError && <div className="mt-4"><Notice kind="error" text={logoutError} /></div>}
-      </article>
-      <aside className="relative overflow-hidden rounded-[22px] bg-[#213a32] p-6 text-[#f4f0e5] sm:p-8">
-        <div className="absolute -right-12 -top-10 h-48 w-48 rounded-full border border-white/10"></div><div className="absolute -right-5 -top-3 h-32 w-32 rounded-full border border-white/10"></div>
-        <div className="relative"><div className="eyebrow text-[#a9c9b4]">{admin ? 'Secure access' : 'Made for your work'}</div><h2 className="serif mt-4 max-w-sm text-3xl font-semibold leading-tight tracking-[-.05em]">{admin ? 'A trusted space for the people behind the network.' : 'Good partnerships begin with the right people.'}</h2><p className="mt-4 max-w-sm text-sm leading-6 text-[#d3ddd4]">{admin ? 'Your role and access are confirmed by the network server.' : 'Your account is verified and your place in the community is ready.'}</p><div className="mt-8 flex items-center gap-2 text-xs font-semibold text-[#b8d4bd]"><Check size={15} /> {user.emailVerified ? 'Verified account' : 'Account active'}</div></div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+          <div><div className="mb-2 flex items-center justify-between text-xs"><span className="font-semibold">Profile completeness</span><span data-testid="text-completeness" className="font-semibold text-primary">{completeness}%</span></div><div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${completeness}%` }} /></div></div>
+          <div className="rounded-xl bg-[#e9e9df] px-4 py-3"><p className="eyebrow text-muted-foreground">Authenticity code</p><p className="mt-1 font-mono text-sm font-bold tracking-[.12em] text-foreground" data-testid="text-proof-code">{profile.proofCode}</p><p className="mt-1 max-w-[230px] text-[10px] leading-4 text-muted-foreground">Paste this code into the bio of the social accounts you want verified.</p></div>
+        </div>
+        {profile.approvalStatus === 'REJECTED' && profile.rejectionReason && <div className="mt-4 rounded-xl border border-[#e3c2bb] bg-[#f7e9e6] p-4 text-sm leading-6 text-[#8f463d]" data-testid="text-rejection-reason"><strong>Review note:</strong> {profile.rejectionReason}</div>}
+        {profile.approvalStatus === 'PENDING_APPROVAL' && <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-secondary/70 p-3.5 text-xs leading-5 text-secondary-foreground"><Clock3 size={16} className="mt-0.5 shrink-0" /><span>Your profile is in the review queue. You can continue refining it while it is pending.</span></div>}
+      </div>
+      <aside className="flex min-w-[190px] flex-col justify-between rounded-[22px] bg-[#213a32] p-5 text-[#f4f0e5] sm:p-6">
+        <div><div className="eyebrow text-[#a9c9b4]">A good profile</div><p className="serif mt-3 text-2xl font-semibold leading-tight tracking-[-.04em]">Specific beats impressive.</p><p className="mt-2 text-xs leading-5 text-[#d3ddd4]">Tell us what you make, who you reach, and where to see the work.</p></div>
+        <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-[#b8d4bd]"><ShieldCheck size={15} /> Private until approved</div>
       </aside>
     </div>
-  </DashboardShell>;
+    <form onSubmit={submit} className="rounded-[22px] border border-border bg-card p-5 sm:p-8">
+      <div className="flex flex-col justify-between gap-3 border-b border-border pb-5 sm:flex-row sm:items-end"><div><div className="eyebrow text-primary">Profile details</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">Make the introduction count.</h2></div><p className="text-xs text-muted-foreground">Fields marked with * are required</p></div>
+      <div className="mt-6 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+        <label className="block"><span className="mb-1.5 block text-xs font-semibold">Display name *</span><input className="field" data-testid="input-display-name" value={displayName} onChange={event => setDisplayName(event.target.value)} maxLength={120} required placeholder="Name your audience knows" /></label>
+        <label className="block"><span className="mb-1.5 block text-xs font-semibold">Primary niche *</span><select className="field" data-testid="select-niche" value={niche} onChange={event => setNiche(event.target.value as CreatorNiche)} required>{NICHE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label className="block sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold">Short bio *</span><textarea className="field min-h-[112px] resize-y" data-testid="input-bio" value={bio} onChange={event => setBio(event.target.value.slice(0, 300))} maxLength={300} required placeholder="What do you create, and who is it for?" /><span className="mt-1.5 block text-right text-[11px] text-muted-foreground" data-testid="text-bio-count">{bio.length}/300</span></label>
+        <label className="block sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold">Country or region *</span><select className="field" data-testid="select-country" value={country} onChange={event => setCountry(event.target.value)} required><option value="">Choose your location</option>{COUNTRY_OPTIONS.map(option => <option key={option.code} value={option.code}>{option.name}</option>)}</select></label>
+      </div>
+      <div className="mt-8 border-t border-border pt-6">
+        <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="eyebrow text-muted-foreground">Channels</div><h3 className="serif mt-1 text-xl font-semibold tracking-[-.04em]">Where your work lives</h3></div><span className="text-xs text-muted-foreground">{platforms.length} of 6 added</span></div>
+        <div className="mt-4 space-y-3">
+          {platforms.map((item, index) => <div key={item.platform} className="grid gap-3 rounded-2xl border border-border bg-background/60 p-3 sm:grid-cols-[145px_1fr_145px_38px] sm:items-center" data-testid={`row-platform-${item.platform.toLowerCase().replaceAll(' ', '-')}`}>
+            <div className="flex items-center gap-2 text-sm font-semibold"><span className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-primary"><Globe2 size={15} /></span>{item.platform}</div>
+            <label className="sr-only" htmlFor={`profile-url-${index}`}>{item.platform} profile URL</label><input id={`profile-url-${index}`} className="field !py-2.5" data-testid={`input-platform-url-${index}`} type="url" maxLength={2048} value={item.url} onChange={event => updatePlatform(index, 'url', event.target.value)} placeholder="https://…" />
+            <label className="sr-only" htmlFor={`profile-followers-${index}`}>{item.platform} audience size</label><input id={`profile-followers-${index}`} className="field !py-2.5" data-testid={`input-platform-followers-${index}`} type="number" min="0" max="2147483647" step="1" value={item.followers} onChange={event => updatePlatform(index, 'followers', event.target.value)} placeholder="Followers" />
+            <button type="button" onClick={() => setPlatforms(items => items.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${item.platform}`} data-testid={`button-remove-platform-${index}`} className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground transition hover:bg-[#f7e9e6] hover:text-[#8f463d]"><Trash2 size={16} /></button>
+          </div>)}
+          {platforms.length === 0 && <div className="rounded-2xl border border-dashed border-border px-5 py-7 text-center"><Globe2 size={20} className="mx-auto text-primary" /><p className="mt-2 text-sm font-semibold">Add a channel to get started</p><p className="mt-1 text-xs text-muted-foreground">Share a public profile link and your current audience size.</p></div>}
+        </div>
+        {platforms.length < 6 && <div className="mt-3 flex flex-wrap gap-2">{addablePlatforms.map(platform => <button key={platform} type="button" onClick={() => setPlatforms(items => [...items, { platform, url: '', followers: '' }])} data-testid={`button-add-platform-${platform.toLowerCase().replaceAll(' ', '-')}`} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-semibold transition hover:border-primary/40 hover:bg-secondary/60"><Plus size={14} /> {platform}</button>)}</div>}
+      </div>
+      {saveError && <div className="mt-5"><Notice kind="error" text={saveError} /></div>}
+      {saveMessage && <div className="mt-5"><Notice kind="success" text={saveMessage} /></div>}
+      <div className="mt-6 flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-5 text-muted-foreground">Saving edits after rejection sends your profile back for review.</p><button type="submit" data-testid="button-save-profile" disabled={!ready || saveProfile.isPending} className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-55"><Save size={15} />{saveProfile.isPending ? 'Saving profile…' : profile.approvalStatus === 'REJECTED' ? 'Save and resubmit' : 'Save profile'}</button></div>
+    </form>
+  </div>;
+}
+
+function AdminReview({ query }: { query: UseQueryResult<AdminCreatorProfiles, Error> }) {
+  const queryClient = useQueryClient();
+  const approval = useUpdateCreatorApproval();
+  const verification = useUpdateCreatorPlatformVerification();
+  const [filter, setFilter] = useState<'ALL' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED'>('PENDING_APPROVAL');
+  const [search, setSearch] = useState('');
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [actionMessage, setActionMessage] = useState('');
+  const creators = query.data?.creators ?? [];
+  const visible = creators.filter(person => (filter === 'ALL' || person.approvalStatus === filter) && `${person.displayName} ${person.userName} ${person.email} ${person.proofCode}`.toLowerCase().includes(search.toLowerCase()));
+  const pendingCount = creators.filter(person => person.approvalStatus === 'PENDING_APPROVAL').length;
+  const refresh = () => queryClient.invalidateQueries({ queryKey: getListAdminCreatorProfilesQueryKey() });
+  const decide = (person: AdminCreatorProfile, status: 'APPROVED' | 'REJECTED', rejectionReason?: string) => {
+    setActionError(''); setActionMessage('');
+    approval.mutate({ userId: person.userId, data: status === 'REJECTED' ? { status, reason: rejectionReason } : { status } }, {
+      onSuccess: response => { setActionMessage(response.message); setRejecting(null); setReason(''); refresh(); },
+      onError: error => setActionError(errorText(error)),
+    });
+  };
+  const verifyPlatform = (person: AdminCreatorProfile, platform: CreatorPlatform, verified: boolean) => {
+    setActionError(''); setActionMessage('');
+    verification.mutate({ userId: person.userId, platform, data: { verified } }, {
+      onSuccess: response => { setActionMessage(response.message); refresh(); },
+      onError: error => setActionError(errorText(error)),
+    });
+  };
+  if (query.isLoading) return <ProfileLoading />;
+  if (query.isError) return <div className="mt-8"><InlineError message={errorText(query.error)} onRetry={() => query.refetch()} testId="button-retry-admin-profiles" /></div>;
+  return <div className="page-enter mt-8 space-y-5">
+    <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+      <div className="rounded-[22px] border border-border bg-card p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="eyebrow text-primary">Review desk</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">Creator profiles</h2><p className="mt-1 max-w-lg text-sm leading-6 text-muted-foreground">Review profile context, verify platform links manually, and record a clear decision.</p></div><span className="rounded-full bg-[#f0e6d8] px-3 py-1.5 text-xs font-bold text-[#805a36]" data-testid="text-pending-count">{pendingCount} awaiting review</span></div>
+      </div>
+      <div className="flex items-center gap-3 rounded-[22px] bg-[#213a32] px-5 py-4 text-[#f4f0e5] sm:min-w-[210px]"><div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-[#b8d4bd]"><ShieldCheck size={19} /></div><div><p className="eyebrow text-[#a9c9b4]">Network trust</p><p className="mt-1 text-sm font-semibold">Manual review only</p></div></div>
+    </div>
+    <div className="flex flex-col gap-3 rounded-[18px] border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="relative w-full sm:max-w-xs"><Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" /><input className="field !py-2.5 !pl-10" data-testid="input-search-creators" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search name, email, code" /></div>
+      <div className="flex gap-1 overflow-x-auto">{(['PENDING_APPROVAL', 'ALL', 'APPROVED', 'REJECTED'] as const).map(value => <button key={value} onClick={() => setFilter(value)} data-testid={`button-filter-${value.toLowerCase()}`} className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition ${filter === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>{value === 'PENDING_APPROVAL' ? 'Pending' : value === 'ALL' ? 'All profiles' : value === 'APPROVED' ? 'Approved' : 'Rejected'}</button>)}</div>
+    </div>
+    {actionError && <Notice kind="error" text={actionError} />}
+    {actionMessage && <Notice kind="success" text={actionMessage} />}
+    {!visible.length ? <div className="rounded-[22px] border border-dashed border-border bg-card px-6 py-14 text-center" data-testid="empty-admin-profiles"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-secondary text-primary"><Search size={20} /></div><h3 className="serif mt-4 text-xl font-semibold">No profiles in this view.</h3><p className="mt-1 text-sm text-muted-foreground">{search ? 'Try another search term.' : 'New creator profiles will appear here when submitted.'}</p></div>
+      : <div className="space-y-4">{visible.map(person => <AdminCreatorCard key={person.userId} person={person} rejecting={rejecting === person.userId} reason={reason} onRejectStart={() => { setRejecting(person.userId); setReason(''); }} onRejectCancel={() => setRejecting(null)} onReasonChange={setReason} onApprove={() => decide(person, 'APPROVED')} onReject={() => decide(person, 'REJECTED', reason.trim())} onToggleVerification={(platform, verified) => verifyPlatform(person, platform, verified)} busy={approval.isPending || verification.isPending} />)}</div>}
+  </div>;
+}
+
+function AdminCreatorCard({ person, rejecting, reason, onRejectStart, onRejectCancel, onReasonChange, onApprove, onReject, onToggleVerification, busy }: { person: AdminCreatorProfile; rejecting: boolean; reason: string; onRejectStart: () => void; onRejectCancel: () => void; onReasonChange: (value: string) => void; onApprove: () => void; onReject: () => void; onToggleVerification: (platform: CreatorPlatform, verified: boolean) => void; busy: boolean }) {
+  return <article className="overflow-hidden rounded-[22px] border border-border bg-card" data-testid={`card-creator-${person.userId}`}>
+    <div className="grid gap-4 border-b border-border p-5 sm:grid-cols-[1fr_auto] sm:items-start sm:p-6">
+      <div><div className="flex flex-wrap items-center gap-2"><h3 className="serif text-xl font-semibold tracking-[-.04em]" data-testid={`text-creator-name-${person.userId}`}>{person.displayName || person.userName}</h3><ApprovalBadge status={person.approvalStatus} testId={`status-approval-${person.userId}`} /></div><p className="mt-1 text-xs text-muted-foreground">{person.userName} <span className="px-1">·</span> {person.email}</p></div>
+      <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-2"><div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${person.completeness}%` }} /></div><span className="text-xs font-semibold" data-testid={`text-creator-completeness-${person.userId}`}>{person.completeness}% complete</span></div>
+    </div>
+    <div className="grid gap-5 p-5 sm:grid-cols-[1fr_.9fr] sm:p-6">
+      <div>
+        <div className="flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-secondary px-3 py-1.5 font-semibold text-secondary-foreground">{person.niche || 'Niche not set'}</span><span className="rounded-full bg-muted px-3 py-1.5 font-medium text-muted-foreground">{countryLabel(person.country)}</span><span className="rounded-full border border-border px-3 py-1.5 font-mono font-semibold">{person.proofCode}</span></div>
+        <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-foreground/85" data-testid={`text-creator-bio-${person.userId}`}>{person.bio || 'No bio has been added yet.'}</p>
+        {person.rejectionReason && person.approvalStatus === 'REJECTED' && <p className="mt-3 rounded-xl bg-[#f7e9e6] p-3 text-xs leading-5 text-[#8f463d]"><strong>Previous review note:</strong> {person.rejectionReason}</p>}
+      </div>
+      <div>
+        <div className="eyebrow text-muted-foreground">Platform links · manual check</div>
+        {!person.platforms.length ? <p className="mt-3 rounded-xl bg-background p-3 text-xs text-muted-foreground">No platforms submitted.</p> : <div className="mt-2 space-y-2">{person.platforms.map((platform, index) => <div key={`${platform.platform}-${index}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-background/70 px-3 py-2.5" data-testid={`row-admin-platform-${person.userId}-${index}`}>
+          <div className="min-w-0"><p className="text-xs font-semibold">{platform.platform} <span className="font-normal text-muted-foreground">· {formatAudience(platform.followers)}</span></p><a className="mt-1 inline-flex max-w-full items-center gap-1 break-all text-[11px] text-primary underline underline-offset-2" data-testid={`link-platform-${person.userId}-${index}`} href={platform.url} target="_blank" rel="noreferrer"><span className="line-clamp-1">{platform.url}</span><ExternalLink size={11} className="shrink-0" /></a></div>
+          <button type="button" onClick={() => onToggleVerification(platform.platform, !platform.verified)} disabled={busy} data-testid={`button-verify-${person.userId}-${index}`} className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] font-bold transition disabled:opacity-50 ${platform.verified ? 'bg-[#e7efe6] text-[#315848]' : 'border border-border text-muted-foreground hover:bg-secondary'}`}>{platform.verified ? <><BadgeCheck size={13} /> Verified</> : <><RotateCcw size={12} /> Mark verified</>}</button>
+        </div>)}</div>}
+      </div>
+    </div>
+    {person.approvalStatus === 'PENDING_APPROVAL' && <div className="flex flex-col gap-3 border-t border-border bg-background/55 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      {rejecting ? <div className="flex w-full flex-col gap-2 sm:flex-row"><input className="field !py-2.5" data-testid={`input-rejection-reason-${person.userId}`} value={reason} onChange={event => onReasonChange(event.target.value.slice(0, 300))} maxLength={300} placeholder="A clear note for the creator is required" aria-label="Rejection reason" /><button type="button" onClick={onRejectCancel} data-testid={`button-cancel-rejection-${person.userId}`} className="inline-flex items-center justify-center gap-1 rounded-full border border-border px-4 py-2 text-xs font-semibold"><X size={14} /> Cancel</button><button type="button" onClick={onReject} disabled={!reason.trim() || busy} data-testid={`button-confirm-rejection-${person.userId}`} className="rounded-full bg-destructive px-4 py-2 text-xs font-semibold text-destructive-foreground disabled:opacity-50">Confirm rejection</button></div>
+      : <><p className="text-xs leading-5 text-muted-foreground">Review the submitted details before making a decision.</p><div className="flex gap-2"><button type="button" onClick={onRejectStart} data-testid={`button-reject-${person.userId}`} disabled={busy} className="rounded-full border border-border px-4 py-2.5 text-xs font-semibold transition hover:bg-[#f7e9e6] hover:text-[#8f463d] disabled:opacity-50">Reject</button><button type="button" onClick={onApprove} data-testid={`button-approve-${person.userId}`} disabled={busy} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition hover:brightness-95 disabled:opacity-50"><Check size={14} /> Approve creator</button></div></>}
+    </div>}
+  </article>;
+}
+
+function ApprovalBadge({ status, testId }: { status: string; testId?: string }) {
+  const styles = status === 'APPROVED' ? 'bg-[#e7efe6] text-[#315848]' : status === 'REJECTED' ? 'bg-[#f7e9e6] text-[#8f463d]' : 'bg-[#f0e6d8] text-[#805a36]';
+  const label = status === 'PENDING_APPROVAL' ? 'Pending approval' : status === 'APPROVED' ? 'Approved' : 'Rejected';
+  return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${styles}`} data-testid={testId ?? `status-approval-${status.toLowerCase()}`}>{status === 'APPROVED' ? <CheckCircle2 size={12} /> : <Clock3 size={12} />}{label}</span>;
+}
+
+function ProfileLoading() {
+  return <div className="mt-8 animate-pulse space-y-4" data-testid="loading-profile"><div className="grid gap-4 sm:grid-cols-2"><div className="h-44 rounded-[22px] bg-muted" /><div className="h-44 rounded-[22px] bg-muted" /></div><div className="h-[460px] rounded-[22px] bg-muted" /></div>;
+}
+
+function InlineError({ message, onRetry, testId }: { message: string; onRetry: () => void; testId: string }) {
+  return <div className="rounded-[22px] border border-[#e3c2bb] bg-card p-6"><Notice kind="error" text={message} /><button type="button" onClick={onRetry} data-testid={testId} className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Retry</button></div>;
+}
+
+function countryLabel(code: string) {
+  return COUNTRY_OPTIONS.find(option => option.code === code)?.name ?? (code || 'Location not set');
+}
+
+function formatAudience(value: number) {
+  return new Intl.NumberFormat('en', { notation: value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value);
 }
 
 function SummaryRow({ label, value, status }: { label: string; value: string; status?: boolean }) {

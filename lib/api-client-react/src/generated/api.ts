@@ -20,8 +20,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminCreatorProfiles,
   AuthMessage,
   AuthUser,
+  CreatorApprovalInput,
+  CreatorPlatform,
+  CreatorPlatformVerificationInput,
+  CreatorProfile,
+  CreatorProfileInput,
   ErrorResponse,
   HealthStatus,
   LoginInput,
@@ -792,4 +798,426 @@ export function useGetAdminDashboard<TData = Awaited<ReturnType<typeof getAdminD
 
 
 
+
+export const getGetCreatorProfileUrl = () => {
+
+
+
+
+  return `/api/creator/profile`
+}
+
+/**
+ * @summary Get the signed-in creator's profile
+ */
+export const getCreatorProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<CreatorProfile> => {
+
+  return customFetch<CreatorProfile>(getGetCreatorProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCreatorProfileQueryKey = () => {
+    return [
+    `/api/creator/profile`
+    ] as const;
+    }
+
+
+export const getGetCreatorProfileQueryOptions = <TData = Awaited<ReturnType<typeof getCreatorProfile>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreatorProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCreatorProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCreatorProfile>>> = ({ signal }) => getCreatorProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCreatorProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCreatorProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getCreatorProfile>>>
+export type GetCreatorProfileQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get the signed-in creator's profile
+ */
+
+export function useGetCreatorProfile<TData = Awaited<ReturnType<typeof getCreatorProfile>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreatorProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCreatorProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateCreatorProfileUrl = () => {
+
+
+
+
+  return `/api/creator/profile`
+}
+
+/**
+ * @summary Save the signed-in creator's profile
+ */
+export const updateCreatorProfile = async (creatorProfileInput: CreatorProfileInput, options?: Parameters<typeof customFetch>[1]): Promise<CreatorProfile> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CreatorProfile>(getUpdateCreatorProfileUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(creatorProfileInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateCreatorProfileMutationKey = () => ['updateCreatorProfile'] as const;
+
+export const getUpdateCreatorProfileMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCreatorProfile>>, TError,UpdateCreatorProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCreatorProfile>>, TError,UpdateCreatorProfileMutationVariables, TContext> => {
+
+const mutationKey = getUpdateCreatorProfileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCreatorProfile>>, UpdateCreatorProfileMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateCreatorProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCreatorProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateCreatorProfile>>>
+    export type UpdateCreatorProfileMutationBody = BodyType<CreatorProfileInput>
+    export type UpdateCreatorProfileMutationError = ErrorType<ErrorResponse>
+    export type UpdateCreatorProfileMutationVariables = {data: BodyType<CreatorProfileInput>}
+
+    /**
+ * @summary Save the signed-in creator's profile
+ */
+export const useUpdateCreatorProfile = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCreatorProfile>>, TError,UpdateCreatorProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCreatorProfile>>,
+        TError,
+        UpdateCreatorProfileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateCreatorProfileMutationOptions(options));
+    }
+
+export const getListAdminCreatorProfilesUrl = () => {
+
+
+
+
+  return `/api/admin/creator-profiles`
+}
+
+/**
+ * @summary List all creator profiles for review
+ */
+export const listAdminCreatorProfiles = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCreatorProfiles> => {
+
+  return customFetch<AdminCreatorProfiles>(getListAdminCreatorProfilesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminCreatorProfilesQueryKey = () => {
+    return [
+    `/api/admin/creator-profiles`
+    ] as const;
+    }
+
+
+export const getListAdminCreatorProfilesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminCreatorProfilesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCreatorProfiles>>> = ({ signal }) => listAdminCreatorProfiles({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminCreatorProfilesQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminCreatorProfiles>>>
+export type ListAdminCreatorProfilesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List all creator profiles for review
+ */
+
+export function useListAdminCreatorProfiles<TData = Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminCreatorProfilesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateCreatorApprovalUrl = (userId: string,) => {
+
+
+
+
+  return `/api/admin/creator-profiles/${userId}/approval`
+}
+
+/**
+ * @summary Approve or reject a creator profile
+ */
+export const updateCreatorApproval = async (userId: string,
+    creatorApprovalInput: CreatorApprovalInput, options?: Parameters<typeof customFetch>[1]): Promise<AuthMessage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AuthMessage>(getUpdateCreatorApprovalUrl(userId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(creatorApprovalInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateCreatorApprovalMutationKey = () => ['updateCreatorApproval'] as const;
+
+export const getUpdateCreatorApprovalMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCreatorApproval>>, TError,UpdateCreatorApprovalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCreatorApproval>>, TError,UpdateCreatorApprovalMutationVariables, TContext> => {
+
+const mutationKey = getUpdateCreatorApprovalMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCreatorApproval>>, UpdateCreatorApprovalMutationVariables> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  updateCreatorApproval(userId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCreatorApprovalMutationResult = NonNullable<Awaited<ReturnType<typeof updateCreatorApproval>>>
+    export type UpdateCreatorApprovalMutationBody = BodyType<CreatorApprovalInput>
+    export type UpdateCreatorApprovalMutationError = ErrorType<ErrorResponse>
+    export type UpdateCreatorApprovalMutationVariables = {userId: string;data: BodyType<CreatorApprovalInput>}
+
+    /**
+ * @summary Approve or reject a creator profile
+ */
+export const useUpdateCreatorApproval = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCreatorApproval>>, TError,UpdateCreatorApprovalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCreatorApproval>>,
+        TError,
+        UpdateCreatorApprovalMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateCreatorApprovalMutationOptions(options));
+    }
+
+export const getUpdateCreatorPlatformVerificationUrl = (userId: string,
+    platform: CreatorPlatform,) => {
+
+
+
+
+  return `/api/admin/creator-profiles/${userId}/platforms/${platform}/verification`
+}
+
+/**
+ * @summary Mark a creator platform link verified
+ */
+export const updateCreatorPlatformVerification = async (userId: string,
+    platform: CreatorPlatform,
+    creatorPlatformVerificationInput: CreatorPlatformVerificationInput, options?: Parameters<typeof customFetch>[1]): Promise<AuthMessage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AuthMessage>(getUpdateCreatorPlatformVerificationUrl(userId,platform),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(creatorPlatformVerificationInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateCreatorPlatformVerificationMutationKey = () => ['updateCreatorPlatformVerification'] as const;
+
+export const getUpdateCreatorPlatformVerificationMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCreatorPlatformVerification>>, TError,UpdateCreatorPlatformVerificationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCreatorPlatformVerification>>, TError,UpdateCreatorPlatformVerificationMutationVariables, TContext> => {
+
+const mutationKey = getUpdateCreatorPlatformVerificationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCreatorPlatformVerification>>, UpdateCreatorPlatformVerificationMutationVariables> = (props) => {
+          const {userId,platform,data} = props ?? {};
+
+          return  updateCreatorPlatformVerification(userId,platform,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCreatorPlatformVerificationMutationResult = NonNullable<Awaited<ReturnType<typeof updateCreatorPlatformVerification>>>
+    export type UpdateCreatorPlatformVerificationMutationBody = BodyType<CreatorPlatformVerificationInput>
+    export type UpdateCreatorPlatformVerificationMutationError = ErrorType<ErrorResponse>
+    export type UpdateCreatorPlatformVerificationMutationVariables = {userId: string;platform: CreatorPlatform;data: BodyType<CreatorPlatformVerificationInput>}
+
+    /**
+ * @summary Mark a creator platform link verified
+ */
+export const useUpdateCreatorPlatformVerification = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCreatorPlatformVerification>>, TError,UpdateCreatorPlatformVerificationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCreatorPlatformVerification>>,
+        TError,
+        UpdateCreatorPlatformVerificationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateCreatorPlatformVerificationMutationOptions(options));
+    }
 

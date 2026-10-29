@@ -150,3 +150,177 @@ export const GetAdminDashboardResponse = zod.object({
 })
 
 
+/**
+ * @summary Get the signed-in creator's profile
+ */
+export const getCreatorProfileResponseCountryMax = 2;
+
+
+export const getCreatorProfileResponseCountryRegExp = new RegExp('^([A-Z]{2})?$');
+export const getCreatorProfileResponseProofCodeRegExp = new RegExp('^TSN-[0-9]{4}$');
+export const getCreatorProfileResponseCompletenessMin = 0;
+export const getCreatorProfileResponseCompletenessMax = 100;
+
+export const getCreatorProfileResponsePlatformsItemFollowersMin = 0;
+
+
+
+export const GetCreatorProfileResponse = zod.object({
+  "userId": zod.string().uuid(),
+  "displayName": zod.string(),
+  "bio": zod.string(),
+  "country": zod.string().max(getCreatorProfileResponseCountryMax).regex(getCreatorProfileResponseCountryRegExp).describe('ISO-style two-letter country or territory code, or empty before profile setup'),
+  "niche": zod.string(),
+  "proofCode": zod.string().regex(getCreatorProfileResponseProofCodeRegExp),
+  "approvalStatus": zod.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED']),
+  "rejectionReason": zod.string().nullable(),
+  "completeness": zod.number().int().min(getCreatorProfileResponseCompletenessMin).max(getCreatorProfileResponseCompletenessMax),
+  "platforms": zod.array(zod.object({
+  "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
+  "url": zod.string().url(),
+  "followers": zod.number().int().min(getCreatorProfileResponsePlatformsItemFollowersMin),
+  "verified": zod.boolean()
+}))
+})
+
+
+/**
+ * @summary Save the signed-in creator's profile
+ */
+export const updateCreatorProfileBodyDisplayNameMax = 120;
+
+export const updateCreatorProfileBodyBioMax = 300;
+
+export const updateCreatorProfileBodyCountryMin = 2;
+export const updateCreatorProfileBodyCountryMax = 2;
+
+
+export const updateCreatorProfileBodyCountryRegExp = new RegExp('^[A-Z]{2}$');
+export const updateCreatorProfileBodyPlatformsItemUrlMax = 2048;
+
+export const updateCreatorProfileBodyPlatformsItemFollowersMin = 0;
+export const updateCreatorProfileBodyPlatformsItemFollowersMax = 2147483647;
+
+export const updateCreatorProfileBodyPlatformsMax = 6;
+
+
+
+export const UpdateCreatorProfileBody = zod.object({
+  "displayName": zod.string().min(1).max(updateCreatorProfileBodyDisplayNameMax),
+  "bio": zod.string().max(updateCreatorProfileBodyBioMax),
+  "country": zod.string().min(updateCreatorProfileBodyCountryMin).max(updateCreatorProfileBodyCountryMax).regex(updateCreatorProfileBodyCountryRegExp).describe('ISO-style two-letter country or territory code'),
+  "niche": zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other']),
+  "platforms": zod.array(zod.object({
+  "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
+  "url": zod.string().url().max(updateCreatorProfileBodyPlatformsItemUrlMax),
+  "followers": zod.number().int().min(updateCreatorProfileBodyPlatformsItemFollowersMin).max(updateCreatorProfileBodyPlatformsItemFollowersMax)
+})).max(updateCreatorProfileBodyPlatformsMax)
+})
+
+export const updateCreatorProfileResponseCountryMax = 2;
+
+
+export const updateCreatorProfileResponseCountryRegExp = new RegExp('^([A-Z]{2})?$');
+export const updateCreatorProfileResponseProofCodeRegExp = new RegExp('^TSN-[0-9]{4}$');
+export const updateCreatorProfileResponseCompletenessMin = 0;
+export const updateCreatorProfileResponseCompletenessMax = 100;
+
+export const updateCreatorProfileResponsePlatformsItemFollowersMin = 0;
+
+
+
+export const UpdateCreatorProfileResponse = zod.object({
+  "userId": zod.string().uuid(),
+  "displayName": zod.string(),
+  "bio": zod.string(),
+  "country": zod.string().max(updateCreatorProfileResponseCountryMax).regex(updateCreatorProfileResponseCountryRegExp).describe('ISO-style two-letter country or territory code, or empty before profile setup'),
+  "niche": zod.string(),
+  "proofCode": zod.string().regex(updateCreatorProfileResponseProofCodeRegExp),
+  "approvalStatus": zod.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED']),
+  "rejectionReason": zod.string().nullable(),
+  "completeness": zod.number().int().min(updateCreatorProfileResponseCompletenessMin).max(updateCreatorProfileResponseCompletenessMax),
+  "platforms": zod.array(zod.object({
+  "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
+  "url": zod.string().url(),
+  "followers": zod.number().int().min(updateCreatorProfileResponsePlatformsItemFollowersMin),
+  "verified": zod.boolean()
+}))
+})
+
+
+/**
+ * @summary List all creator profiles for review
+ */
+export const listAdminCreatorProfilesResponseCreatorsItemCountryMax = 2;
+
+
+export const listAdminCreatorProfilesResponseCreatorsItemCountryRegExp = new RegExp('^([A-Z]{2})?$');
+export const listAdminCreatorProfilesResponseCreatorsItemProofCodeRegExp = new RegExp('^TSN-[0-9]{4}$');
+export const listAdminCreatorProfilesResponseCreatorsItemCompletenessMin = 0;
+export const listAdminCreatorProfilesResponseCreatorsItemCompletenessMax = 100;
+
+export const listAdminCreatorProfilesResponseCreatorsItemPlatformsItemFollowersMin = 0;
+
+
+
+export const ListAdminCreatorProfilesResponse = zod.object({
+  "creators": zod.array(zod.object({
+  "userId": zod.string().uuid(),
+  "userName": zod.string(),
+  "email": zod.string().email(),
+  "displayName": zod.string(),
+  "bio": zod.string(),
+  "country": zod.string().max(listAdminCreatorProfilesResponseCreatorsItemCountryMax).regex(listAdminCreatorProfilesResponseCreatorsItemCountryRegExp).describe('ISO-style two-letter country or territory code, or empty before profile setup'),
+  "niche": zod.string(),
+  "proofCode": zod.string().regex(listAdminCreatorProfilesResponseCreatorsItemProofCodeRegExp),
+  "approvalStatus": zod.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED']),
+  "rejectionReason": zod.string().nullable(),
+  "completeness": zod.number().int().min(listAdminCreatorProfilesResponseCreatorsItemCompletenessMin).max(listAdminCreatorProfilesResponseCreatorsItemCompletenessMax),
+  "platforms": zod.array(zod.object({
+  "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
+  "url": zod.string().url(),
+  "followers": zod.number().int().min(listAdminCreatorProfilesResponseCreatorsItemPlatformsItemFollowersMin),
+  "verified": zod.boolean()
+}))
+}))
+})
+
+
+/**
+ * @summary Approve or reject a creator profile
+ */
+export const UpdateCreatorApprovalParams = zod.object({
+  "userId": zod.coerce.string().uuid()
+})
+
+export const updateCreatorApprovalBodyReasonMax = 300;
+
+
+
+export const UpdateCreatorApprovalBody = zod.object({
+  "status": zod.enum(['APPROVED', 'REJECTED']),
+  "reason": zod.string().max(updateCreatorApprovalBodyReasonMax).optional()
+})
+
+export const UpdateCreatorApprovalResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Mark a creator platform link verified
+ */
+export const UpdateCreatorPlatformVerificationParams = zod.object({
+  "userId": zod.coerce.string().uuid(),
+  "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])
+})
+
+export const UpdateCreatorPlatformVerificationBody = zod.object({
+  "verified": zod.boolean()
+})
+
+export const UpdateCreatorPlatformVerificationResponse = zod.object({
+  "message": zod.string()
+})
+
+

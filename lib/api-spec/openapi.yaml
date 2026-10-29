@@ -12,6 +12,10 @@ tags:
     description: Health operations
   - name: auth
     description: Account authentication and role-specific dashboards
+  - name: creator-profile
+    description: Creator profile management
+  - name: admin-creator-review
+    description: Creator profile review and verification
 paths:
   /healthz:
     get:
@@ -227,6 +231,202 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /creator/profile:
+    get:
+      operationId: getCreatorProfile
+      tags: [creator-profile]
+      summary: Get the signed-in creator's profile
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Creator profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorProfile"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Creator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateCreatorProfile
+      tags: [creator-profile]
+      summary: Save the signed-in creator's profile
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatorProfileInput"
+      responses:
+        "200":
+          description: Saved creator profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorProfile"
+        "400":
+          description: Profile fields are invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Creator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/creator-profiles:
+    get:
+      operationId: listAdminCreatorProfiles
+      tags: [admin-creator-review]
+      summary: List all creator profiles for review
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Creator profiles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCreatorProfiles"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/creator-profiles/{userId}/approval:
+    patch:
+      operationId: updateCreatorApproval
+      tags: [admin-creator-review]
+      summary: Approve or reject a creator profile
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatorApprovalInput"
+      responses:
+        "200":
+          description: Creator review updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthMessage"
+        "400":
+          description: Approval decision is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Creator not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/creator-profiles/{userId}/platforms/{platform}/verification:
+    patch:
+      operationId: updateCreatorPlatformVerification
+      tags: [admin-creator-review]
+      summary: Mark a creator platform link verified
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: platform
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/CreatorPlatform"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatorPlatformVerificationInput"
+      responses:
+        "200":
+          description: Platform link verification updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthMessage"
+        "400":
+          description: Verification input is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Creator platform link not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   securitySchemes:
     SessionCookie:
@@ -313,6 +513,191 @@ components:
           type: string
           format: uri
       required: [message]
+    CreatorCountry:
+      type: string
+      minLength: 2
+      maxLength: 2
+      pattern: "^[A-Z]{2}$"
+      description: ISO-style two-letter country or territory code
+    CreatorCountryValue:
+      type: string
+      maxLength: 2
+      pattern: "^([A-Z]{2})?$"
+      description: ISO-style two-letter country or territory code, or empty before profile setup
+    CreatorNiche:
+      type: string
+      enum: [Technology, AI, "Developer tools", Gaming, Education, Business, Other]
+    CreatorPlatform:
+      type: string
+      enum: [Instagram, YouTube, LinkedIn, X, TikTok, GitHub]
+    CreatorApprovalStatus:
+      type: string
+      enum: [PENDING_APPROVAL, APPROVED, REJECTED]
+    CreatorApprovalDecision:
+      type: string
+      enum: [APPROVED, REJECTED]
+    CreatorPlatformInput:
+      type: object
+      additionalProperties: false
+      properties:
+        platform:
+          $ref: "#/components/schemas/CreatorPlatform"
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+        followers:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+      required: [platform, url, followers]
+    CreatorProfileInput:
+      type: object
+      additionalProperties: false
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        bio:
+          type: string
+          maxLength: 300
+        country:
+          $ref: "#/components/schemas/CreatorCountry"
+        niche:
+          $ref: "#/components/schemas/CreatorNiche"
+        platforms:
+          type: array
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/CreatorPlatformInput"
+      required: [displayName, bio, country, niche, platforms]
+    CreatorPlatformProfile:
+      type: object
+      properties:
+        platform:
+          $ref: "#/components/schemas/CreatorPlatform"
+        url:
+          type: string
+          format: uri
+        followers:
+          type: integer
+          minimum: 0
+        verified:
+          type: boolean
+      required: [platform, url, followers, verified]
+    CreatorProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        bio:
+          type: string
+        country:
+          $ref: "#/components/schemas/CreatorCountryValue"
+        niche:
+          type: string
+        proofCode:
+          type: string
+          pattern: "^TSN-[0-9]{4}$"
+        approvalStatus:
+          $ref: "#/components/schemas/CreatorApprovalStatus"
+        rejectionReason:
+          type: ["string", "null"]
+        completeness:
+          type: integer
+          minimum: 0
+          maximum: 100
+        platforms:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreatorPlatformProfile"
+      required:
+        - userId
+        - displayName
+        - bio
+        - country
+        - niche
+        - proofCode
+        - approvalStatus
+        - rejectionReason
+        - completeness
+        - platforms
+    AdminCreatorProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        userName:
+          type: string
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        bio:
+          type: string
+        country:
+          $ref: "#/components/schemas/CreatorCountryValue"
+        niche:
+          type: string
+        proofCode:
+          type: string
+          pattern: "^TSN-[0-9]{4}$"
+        approvalStatus:
+          $ref: "#/components/schemas/CreatorApprovalStatus"
+        rejectionReason:
+          type: ["string", "null"]
+        completeness:
+          type: integer
+          minimum: 0
+          maximum: 100
+        platforms:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreatorPlatformProfile"
+      required:
+        - userId
+        - userName
+        - email
+        - displayName
+        - bio
+        - country
+        - niche
+        - proofCode
+        - approvalStatus
+        - rejectionReason
+        - completeness
+        - platforms
+    AdminCreatorProfiles:
+      type: object
+      properties:
+        creators:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCreatorProfile"
+      required: [creators]
+    CreatorApprovalInput:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          $ref: "#/components/schemas/CreatorApprovalDecision"
+        reason:
+          type: string
+          maxLength: 300
+      required: [status]
+    CreatorPlatformVerificationInput:
+      type: object
+      additionalProperties: false
+      properties:
+        verified:
+          type: boolean
+      required: [verified]
     ErrorResponse:
       type: object
       properties:
