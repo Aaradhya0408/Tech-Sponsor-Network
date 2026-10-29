@@ -226,14 +226,27 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
+  let authenticatedUser = user;
+  if (
+    adminEmails.has(user.email.trim().toLowerCase()) &&
+    user.role !== "ADMIN"
+  ) {
+    const [promotedUser] = await db
+      .update(usersTable)
+      .set({ role: "ADMIN" })
+      .where(eq(usersTable.id, user.id))
+      .returning();
+    if (promotedUser) authenticatedUser = promotedUser;
+  }
+
   const sessionToken = randomBytes(32).toString("base64url");
   await db.insert(sessionsTable).values({
     tokenHash: hashToken(sessionToken),
-    userId: user.id,
+    userId: authenticatedUser.id,
     expiresAt: new Date(Date.now() + SESSION_TTL_MS),
   });
   res.cookie(SESSION_COOKIE, sessionToken, cookieOptions());
-  res.json(LogInResponse.parse(userResponse(user)));
+  res.json(LogInResponse.parse(userResponse(authenticatedUser)));
 });
 
 router.post("/auth/resend-verification", async (req, res): Promise<void> => {
