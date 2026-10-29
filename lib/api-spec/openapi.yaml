@@ -92,6 +92,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /auth/resend-verification:
+    post:
+      operationId: resendVerificationLink
+      tags: [auth]
+      summary: Request a fresh email verification link
+      description: Accepts email and password and returns a generic result. A fresh link is generated only for a matching unverified account, and the link is returned to the browser only in development.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Generic resend result; development may include the verification link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignUpResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /auth/logout:
     post:
       operationId: logOut

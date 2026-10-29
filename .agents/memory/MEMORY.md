@@ -1,0 +1,1 @@
+- [Verification link rotation](verification-link-rotation.md) — a resend invalidates older pending links, keeping one usable token per unverified account.

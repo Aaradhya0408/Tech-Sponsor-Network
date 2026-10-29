@@ -66,6 +66,27 @@ export const LogInResponse = zod.object({
 
 
 /**
+ * Accepts email and password and returns a generic result. A fresh link is generated only for a matching unverified account, and the link is returned to the browser only in development.
+ * @summary Request a fresh email verification link
+ */
+export const resendVerificationLinkBodyEmailMax = 320;
+
+export const resendVerificationLinkBodyPasswordMax = 128;
+
+
+
+export const ResendVerificationLinkBody = zod.object({
+  "email": zod.string().email().max(resendVerificationLinkBodyEmailMax),
+  "password": zod.string().min(1).max(resendVerificationLinkBodyPasswordMax)
+})
+
+export const ResendVerificationLinkResponse = zod.object({
+  "message": zod.string(),
+  "verificationUrl": zod.string().url().optional()
+})
+
+
+/**
  * @summary Log out the current account
  */
 export const LogOutResponse = zod.object({

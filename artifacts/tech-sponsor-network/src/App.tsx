@@ -9,6 +9,7 @@ import {
   useGetAdminDashboard,
   useLogIn,
   useLogOut,
+  useResendVerificationLink,
   useSignUp,
   useVerifyEmail,
 } from '@workspace/api-client-react';
@@ -23,6 +24,11 @@ const queryClient = new QueryClient();
 function errorText(error: unknown) {
   if (error && typeof error === 'object' && 'message' in error) return String(error.message);
   return 'Something went wrong. Please try again.';
+}
+
+function errorStatus(error: unknown) {
+  if (error && typeof error === 'object' && 'status' in error && typeof error.status === 'number') return error.status;
+  return undefined;
 }
 
 function Brand({ light = false }: { light?: boolean }) {
@@ -152,15 +158,23 @@ function Login() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [error, setError] = useState('');
+  const [verificationRequired, setVerificationRequired] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendError, setResendError] = useState('');
+  const [verificationUrl, setVerificationUrl] = useState('');
+  const resendVerification = useResendVerificationLink();
   function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError('');
+    event.preventDefault(); setError(''); setVerificationRequired(false); setResendMessage(''); setResendError(''); setVerificationUrl('');
     const form = new FormData(event.currentTarget);
     login.mutate({ data: { email: String(form.get('email')).trim(), password: String(form.get('password')) } }, {
       onSuccess: user => {
         queryClient.setQueryData(getGetCurrentUserQueryKey(), user);
         setLocation(user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
       },
-      onError: err => setError(errorText(err)),
+      onError: err => {
+        setError(errorText(err));
+        setVerificationRequired(errorStatus(err) === 403);
+      },
     });
   }
   return <AuthFrame mode="login" kicker="For verified members" title="Your community is waiting." description="Sign in to your account to continue. Accounts must be verified before access is granted.">
@@ -168,6 +182,37 @@ function Login() {
       <FormField label="Email address" name="email" type="email" placeholder="you@studio.com" autoComplete="email" icon={<Mail size={16} />} />
       <FormField label="Password" name="password" type="password" placeholder="Your password" autoComplete="current-password" icon={<LockKeyhole size={16} />} />
       {error && <Notice kind="error" text={error} />}
+      {verificationRequired && <>
+        <button
+          type="button"
+          data-testid="button-resend-verification"
+          disabled={resendVerification.isPending}
+          onClick={event => {
+            const form = event.currentTarget.form;
+            if (!form) return;
+            const formData = new FormData(form);
+            setResendMessage(''); setResendError(''); setVerificationUrl('');
+            resendVerification.mutate({
+              data: {
+                email: String(formData.get('email')).trim(),
+                password: String(formData.get('password')),
+              },
+            }, {
+              onSuccess: response => {
+                setResendMessage(response.message);
+                setVerificationUrl(response.verificationUrl ?? '');
+              },
+              onError: err => setResendError(errorText(err)),
+            });
+          }}
+          className="text-sm font-semibold text-primary underline underline-offset-4 disabled:opacity-60"
+        >
+          {resendVerification.isPending ? 'Sending verification link…' : 'Resend verification link'}
+        </button>
+        {resendMessage && <Notice kind="success" text={resendMessage} />}
+        {resendError && <Notice kind="error" text={resendError} />}
+        {verificationUrl && <DevelopmentVerificationLink url={verificationUrl} />}
+      </>}
       <button data-testid="button-login" disabled={login.isPending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground transition hover:brightness-95 disabled:cursor-wait disabled:opacity-65">
         {login.isPending ? 'Signing in…' : 'Sign in'} {!login.isPending && <ArrowRight size={16} />}
       </button>
@@ -199,7 +244,7 @@ function Signup() {
       <FormField label="Password" name="password" type="password" placeholder="At least 10 characters" autoComplete="new-password" icon={<LockKeyhole size={16} />} minLength={10} />
       <div className="flex gap-2.5 rounded-xl border border-[#d7d7c7] bg-[#f0efe7] p-3.5 text-xs leading-5 text-muted-foreground"><Mail size={16} className="mt-0.5 shrink-0 text-primary" /><p><strong className="font-semibold text-foreground">Email verification required.</strong> After signup, use the development link shown below or the link printed by the server before signing in.</p></div>
       {message && <Notice kind="success" text={message} />}
-      {verificationUrl && <div className="rounded-xl border border-[#bed1c1] bg-[#e7efe6] p-4" data-testid="panel-dev-verification-link"><p className="text-xs font-semibold text-[#315848]">Development verification link</p><a href={verificationUrl} data-testid="link-dev-verification" className="mt-2 inline-flex items-center gap-2 break-all text-sm font-semibold text-primary underline underline-offset-4">Verify your email <ArrowRight size={15} className="shrink-0" /></a></div>}
+      {verificationUrl && <DevelopmentVerificationLink url={verificationUrl} />}
       {error && <Notice kind="error" text={error} />}
       <button data-testid="button-signup" disabled={signup.isPending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground transition hover:brightness-95 disabled:cursor-wait disabled:opacity-65">
         {signup.isPending ? 'Creating account…' : 'Create account'} {!signup.isPending && <ArrowRight size={16} />}
@@ -220,6 +265,15 @@ function Notice({ kind, text }: { kind: 'success' | 'error'; text: string }) {
   const success = kind === 'success';
   return <div role="status" data-testid={`status-${kind}`} className={`flex gap-2.5 rounded-xl border p-3 text-xs leading-5 ${success ? 'border-[#bed1c1] bg-[#e7efe6] text-[#315848]' : 'border-[#e3c2bb] bg-[#f7e9e6] text-[#8f463d]'}`}>
     {success ? <CheckCircle2 size={16} className="mt-0.5 shrink-0" /> : <ShieldCheck size={16} className="mt-0.5 shrink-0" />}<span>{text}</span>
+  </div>;
+}
+
+function DevelopmentVerificationLink({ url }: { url: string }) {
+  return <div className="rounded-xl border border-[#bed1c1] bg-[#e7efe6] p-4" data-testid="panel-dev-verification-link">
+    <p className="text-xs font-semibold text-[#315848]">Development verification link</p>
+    <a href={url} data-testid="link-dev-verification" className="mt-2 inline-flex items-center gap-2 break-all text-sm font-semibold text-primary underline underline-offset-4">
+      Verify your email <ArrowRight size={15} className="shrink-0" />
+    </a>
   </div>;
 }
 

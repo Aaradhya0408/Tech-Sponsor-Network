@@ -17,6 +17,7 @@ import {
   LogInBody,
   LogInResponse,
   LogOutResponse,
+  ResendVerificationLinkBody,
   SignUpBody,
   SignUpResponse,
   VerifyEmailBody,
@@ -221,7 +222,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
   if (!user.emailVerified) {
-    res.status(403).json({ error: "Verify your email before logging in. Use the link printed by the server." });
+    res.status(403).json({ error: "Verify your email before logging in." });
     return;
   }
 
@@ -233,6 +234,79 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   });
   res.cookie(SESSION_COOKIE, sessionToken, cookieOptions());
   res.json(LogInResponse.parse(userResponse(user)));
+});
+
+router.post("/auth/resend-verification", async (req, res): Promise<void> => {
+  const parsed = ResendVerificationLinkBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Enter a valid email and password." });
+    return;
+  }
+
+  const email = parsed.data.email.trim().toLowerCase();
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.email, email))
+    .limit(1);
+
+  const genericMessage =
+    "If your credentials match an unverified account, a fresh verification link has been generated.";
+  if (
+    !user ||
+    !(await verifyPassword(parsed.data.password, user.passwordHash)) ||
+    user.emailVerified
+  ) {
+    res.json(SignUpResponse.parse({ message: genericMessage }));
+    return;
+  }
+
+  const verificationToken = randomBytes(32).toString("base64url");
+  const verificationExpiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
+  const tokenCreated = await db.transaction(async (tx) => {
+    const [unverifiedUser] = await tx
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.id, user.id),
+          eq(usersTable.emailVerified, false),
+        ),
+      )
+      .limit(1);
+    if (!unverifiedUser) return false;
+
+    await tx
+      .delete(verificationTokensTable)
+      .where(eq(verificationTokensTable.userId, unverifiedUser.id));
+    await tx.insert(verificationTokensTable).values({
+      tokenHash: hashToken(verificationToken),
+      userId: unverifiedUser.id,
+      expiresAt: verificationExpiresAt,
+    });
+    return true;
+  });
+
+  let verificationUrl: URL | undefined;
+  if (tokenCreated) {
+    const origin =
+      req.get("origin") ?? `${req.protocol}://${req.get("host") ?? "localhost"}`;
+    verificationUrl = new URL("/", origin);
+    verificationUrl.searchParams.set("verify", verificationToken);
+    req.log.info(
+      { email, verificationUrl: verificationUrl.toString() },
+      "Email verification link (temporary development delivery)",
+    );
+  }
+
+  res.json(
+    SignUpResponse.parse({
+      message: genericMessage,
+      ...(process.env.NODE_ENV === "development" && verificationUrl
+        ? { verificationUrl: verificationUrl.toString() }
+        : {}),
+    }),
+  );
 });
 
 router.post("/auth/logout", async (req, res): Promise<void> => {
