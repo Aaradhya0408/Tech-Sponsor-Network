@@ -347,6 +347,10 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       },
     );
     assert.equal(creatorCampaignStatus.response.status, 403);
+    const adminCreatorCampaignList = await request("/creator/campaigns", {
+      cookie: adminLogin.cookie,
+    });
+    assert.equal(adminCreatorCampaignList.response.status, 403);
 
     const invalidPastDeadline = await request("/admin/campaigns", {
       method: "POST",
@@ -385,6 +389,55 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       campaignCreate.body.paymentRule,
       "Payment is made only if your submission is accepted. If your work is not accepted, no payment will be made.",
     );
+
+    const expiredCampaignId = randomUUID();
+    const expiredDeadline = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const adminUser = await db.query(
+      "SELECT id FROM tech_sponsor_users WHERE email = $1",
+      [adminEmail],
+    );
+    await db.query(
+      `INSERT INTO tech_sponsor_campaigns
+         (id, title, organizer_name, short_description, objectives,
+          content_requirements, reward_amount, currency, deadline,
+          accepted_platforms, allowed_countries, minimum_followers, niches,
+          status, created_by)
+       VALUES
+         ($1, 'Expired test campaign', 'Northstar Labs', 'Expired test',
+          'Test campaign visibility', 'No creator action required',
+          10, 'USD', $2, ARRAY['YouTube']::text[], ARRAY['Any']::text[],
+          0, ARRAY['Technology']::text[], 'PUBLISHED', $3)`,
+      [expiredCampaignId, expiredDeadline, adminUser.rows[0].id],
+    );
+
+    const creatorCampaignsWhileDraft = await request("/creator/campaigns", {
+      cookie: creatorLogin.cookie,
+    });
+    assert.equal(creatorCampaignsWhileDraft.response.status, 200);
+    assert.ok(
+      !creatorCampaignsWhileDraft.body.campaigns.some(
+        (item) => item.id === campaignId,
+      ),
+      "draft campaigns must not appear to creators",
+    );
+    assert.ok(
+      !creatorCampaignsWhileDraft.body.campaigns.some(
+        (item) => item.id === expiredCampaignId,
+      ),
+      "expired campaigns must not appear to creators",
+    );
+    const creatorDraftDetail = await request(
+      `/creator/campaigns/${campaignId}`,
+      { cookie: creatorLogin.cookie },
+    );
+    assert.equal(creatorDraftDetail.response.status, 404);
+    const creatorExpiredDetail = await request(
+      `/creator/campaigns/${expiredCampaignId}`,
+      { cookie: creatorLogin.cookie },
+    );
+    assert.equal(creatorExpiredDetail.response.status, 404);
 
     const campaignList = await request("/admin/campaigns", {
       cookie: adminLogin.cookie,
@@ -432,6 +485,24 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     );
     assert.equal(publishCampaign.response.status, 200);
     assert.equal(publishCampaign.body.status, "PUBLISHED");
+    const publishedCreatorCampaigns = await request("/creator/campaigns", {
+      cookie: creatorLogin.cookie,
+    });
+    assert.equal(publishedCreatorCampaigns.response.status, 200);
+    const visibleCampaign = publishedCreatorCampaigns.body.campaigns.find(
+      (item) => item.id === campaignId,
+    );
+    assert.equal(visibleCampaign?.status, "PUBLISHED");
+    assert.equal(
+      visibleCampaign?.paymentRule,
+      "Payment is made only if your submission is accepted. If your work is not accepted, no payment will be made.",
+    );
+    const creatorCampaignDetail = await request(
+      `/creator/campaigns/${campaignId}`,
+      { cookie: creatorLogin.cookie },
+    );
+    assert.equal(creatorCampaignDetail.response.status, 200);
+    assert.equal(creatorCampaignDetail.body.id, campaignId);
     const unpublishCampaign = await request(
       `/admin/campaigns/${campaignId}/status`,
       {
@@ -442,6 +513,21 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     );
     assert.equal(unpublishCampaign.response.status, 200);
     assert.equal(unpublishCampaign.body.status, "DRAFT");
+    const creatorCampaignsAfterUnpublish = await request(
+      "/creator/campaigns",
+      { cookie: creatorLogin.cookie },
+    );
+    assert.ok(
+      !creatorCampaignsAfterUnpublish.body.campaigns.some(
+        (item) => item.id === campaignId,
+      ),
+      "unpublished campaigns must not appear to creators",
+    );
+    const unpublishedDetail = await request(
+      `/creator/campaigns/${campaignId}`,
+      { cookie: creatorLogin.cookie },
+    );
+    assert.equal(unpublishedDetail.response.status, 404);
     const republishCampaign = await request(
       `/admin/campaigns/${campaignId}/status`,
       {
@@ -451,6 +537,14 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       },
     );
     assert.equal(republishCampaign.response.status, 200);
+    const creatorCampaignsAfterRepublish = await request("/creator/campaigns", {
+      cookie: creatorLogin.cookie,
+    });
+    assert.ok(
+      creatorCampaignsAfterRepublish.body.campaigns.some(
+        (item) => item.id === campaignId,
+      ),
+    );
     const closeCampaign = await request(
       `/admin/campaigns/${campaignId}/status`,
       {
@@ -461,6 +555,19 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     );
     assert.equal(closeCampaign.response.status, 200);
     assert.equal(closeCampaign.body.status, "CLOSED");
+    const creatorCampaignsAfterClose = await request("/creator/campaigns", {
+      cookie: creatorLogin.cookie,
+    });
+    assert.ok(
+      !creatorCampaignsAfterClose.body.campaigns.some(
+        (item) => item.id === campaignId,
+      ),
+      "closed campaigns must not appear to creators",
+    );
+    const closedDetail = await request(`/creator/campaigns/${campaignId}`, {
+      cookie: creatorLogin.cookie,
+    });
+    assert.equal(closedDetail.response.status, 404);
     const reopenClosedCampaign = await request(
       `/admin/campaigns/${campaignId}/status`,
       {

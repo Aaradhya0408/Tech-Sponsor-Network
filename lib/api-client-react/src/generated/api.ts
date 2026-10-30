@@ -1225,6 +1225,160 @@ export const useUpdateCreatorPlatformVerification = <TError = ErrorType<ErrorRes
       return useMutation(getUpdateCreatorPlatformVerificationMutationOptions(options));
     }
 
+export const getListCreatorCampaignsUrl = () => {
+
+
+
+
+  return `/api/creator/campaigns`
+}
+
+/**
+ * @summary List published campaigns available to creators
+ */
+export const listCreatorCampaigns = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignList> => {
+
+  return customFetch<AdminCampaignList>(getListCreatorCampaignsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCreatorCampaignsQueryKey = () => {
+    return [
+    `/api/creator/campaigns`
+    ] as const;
+    }
+
+
+export const getListCreatorCampaignsQueryOptions = <TData = Awaited<ReturnType<typeof listCreatorCampaigns>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCreatorCampaignsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCreatorCampaigns>>> = ({ signal }) => listCreatorCampaigns({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCreatorCampaigns>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCreatorCampaignsQueryResult = NonNullable<Awaited<ReturnType<typeof listCreatorCampaigns>>>
+export type ListCreatorCampaignsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List published campaigns available to creators
+ */
+
+export function useListCreatorCampaigns<TData = Awaited<ReturnType<typeof listCreatorCampaigns>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCreatorCampaignsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetCreatorCampaignUrl = (campaignId: string,) => {
+
+
+
+
+  return `/api/creator/campaigns/${campaignId}`
+}
+
+/**
+ * @summary Get a published campaign available to creators
+ */
+export const getCreatorCampaign = async (campaignId: string, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaign> => {
+
+  return customFetch<AdminCampaign>(getGetCreatorCampaignUrl(campaignId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCreatorCampaignQueryKey = (campaignId: string,) => {
+    return [
+    `/api/creator/campaigns/${campaignId}`
+    ] as const;
+    }
+
+
+export const getGetCreatorCampaignQueryOptions = <TData = Awaited<ReturnType<typeof getCreatorCampaign>>, TError = ErrorType<ErrorResponse>>(campaignId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreatorCampaign>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCreatorCampaignQueryKey(campaignId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCreatorCampaign>>> = ({ signal }) => getCreatorCampaign(campaignId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: campaignId !== null && campaignId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCreatorCampaign>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCreatorCampaignQueryResult = NonNullable<Awaited<ReturnType<typeof getCreatorCampaign>>>
+export type GetCreatorCampaignQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get a published campaign available to creators
+ */
+
+export function useGetCreatorCampaign<TData = Awaited<ReturnType<typeof getCreatorCampaign>>, TError = ErrorType<ErrorResponse>>(
+ campaignId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreatorCampaign>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCreatorCampaignQueryOptions(campaignId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListAdminCampaignsUrl = () => {
 
 

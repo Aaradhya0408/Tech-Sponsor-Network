@@ -18,6 +18,8 @@ tags:
     description: Creator profile review and verification
   - name: admin-campaigns
     description: Admin-only campaign management
+  - name: creator-campaigns
+    description: Published campaigns available to creators
 paths:
   /healthz:
     get:
@@ -425,6 +427,71 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Creator platform link not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /creator/campaigns:
+    get:
+      operationId: listCreatorCampaigns
+      tags: [creator-campaigns]
+      summary: List published campaigns available to creators
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Published campaigns with deadlines that have not passed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaignList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Creator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /creator/campaigns/{campaignId}:
+    get:
+      operationId: getCreatorCampaign
+      tags: [creator-campaigns]
+      summary: Get a published campaign available to creators
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Published campaign with deadline that has not passed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaign"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Creator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Campaign not available
           content:
             application/json:
               schema:

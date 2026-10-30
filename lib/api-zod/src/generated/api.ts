@@ -325,6 +325,74 @@ export const UpdateCreatorPlatformVerificationResponse = zod.object({
 
 
 /**
+ * @summary List published campaigns available to creators
+ */
+export const listCreatorCampaignsResponseCampaignsItemDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const listCreatorCampaignsResponseCampaignsItemAllowedCountriesItemMax = 3;
+
+
+export const listCreatorCampaignsResponseCampaignsItemAllowedCountriesItemRegExp = new RegExp('^(Any|[A-Z]{2})$');
+
+
+export const ListCreatorCampaignsResponse = zod.object({
+  "campaigns": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "organizerName": zod.string(),
+  "shortDescription": zod.string(),
+  "objectives": zod.string(),
+  "contentRequirements": zod.string(),
+  "rewardAmount": zod.number(),
+  "currency": zod.string(),
+  "deadline": zod.string().regex(listCreatorCampaignsResponseCampaignsItemDeadlineRegExp),
+  "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
+  "allowedCountries": zod.array(zod.string().max(listCreatorCampaignsResponseCampaignsItemAllowedCountriesItemMax).regex(listCreatorCampaignsResponseCampaignsItemAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
+  "minimumFollowers": zod.number().int(),
+  "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
+  "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "paymentRule": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Get a published campaign available to creators
+ */
+export const GetCreatorCampaignParams = zod.object({
+  "campaignId": zod.coerce.string().uuid()
+})
+
+export const getCreatorCampaignResponseDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const getCreatorCampaignResponseAllowedCountriesItemMax = 3;
+
+
+export const getCreatorCampaignResponseAllowedCountriesItemRegExp = new RegExp('^(Any|[A-Z]{2})$');
+
+
+export const GetCreatorCampaignResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "organizerName": zod.string(),
+  "shortDescription": zod.string(),
+  "objectives": zod.string(),
+  "contentRequirements": zod.string(),
+  "rewardAmount": zod.number(),
+  "currency": zod.string(),
+  "deadline": zod.string().regex(getCreatorCampaignResponseDeadlineRegExp),
+  "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
+  "allowedCountries": zod.array(zod.string().max(getCreatorCampaignResponseAllowedCountriesItemMax).regex(getCreatorCampaignResponseAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
+  "minimumFollowers": zod.number().int(),
+  "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
+  "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "paymentRule": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List campaigns for administrators
  */
 export const listAdminCampaignsResponseCampaignsItemDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
