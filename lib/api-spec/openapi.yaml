@@ -16,6 +16,8 @@ tags:
     description: Creator profile management
   - name: admin-creator-review
     description: Creator profile review and verification
+  - name: admin-campaigns
+    description: Admin-only campaign management
 paths:
   /healthz:
     get:
@@ -427,6 +429,171 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /admin/campaigns:
+    get:
+      operationId: listAdminCampaigns
+      tags: [admin-campaigns]
+      summary: List campaigns for administrators
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Campaign list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaignList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createAdminCampaign
+      tags: [admin-campaigns]
+      summary: Create a draft campaign
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignInput"
+      responses:
+        "201":
+          description: Draft campaign created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaign"
+        "400":
+          description: Campaign fields are invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/campaigns/{campaignId}:
+    patch:
+      operationId: updateAdminCampaign
+      tags: [admin-campaigns]
+      summary: Edit campaign details
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignInput"
+      responses:
+        "200":
+          description: Campaign updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaign"
+        "400":
+          description: Campaign fields are invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/campaigns/{campaignId}/status:
+    patch:
+      operationId: updateAdminCampaignStatus
+      tags: [admin-campaigns]
+      summary: Publish, unpublish, or close a campaign
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignStatusInput"
+      responses:
+        "200":
+          description: Campaign status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaign"
+        "400":
+          description: Campaign status transition is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   securitySchemes:
     SessionCookie:
@@ -698,6 +865,169 @@ components:
         verified:
           type: boolean
       required: [verified]
+    CampaignStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED, CLOSED]
+    CampaignCountry:
+      type: string
+      maxLength: 3
+      pattern: "^(Any|[A-Z]{2})$"
+      description: ISO-style two-letter country code or Any
+    CampaignInput:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        organizerName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        shortDescription:
+          type: string
+          minLength: 1
+          maxLength: 500
+        objectives:
+          type: string
+          minLength: 1
+          maxLength: 3000
+        contentRequirements:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        rewardAmount:
+          type: number
+          minimum: 0.01
+          maximum: 9999999999.99
+          multipleOf: 0.01
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          pattern: "^[A-Z]{3}$"
+          default: USD
+        deadline:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        acceptedPlatforms:
+          type: array
+          minItems: 1
+          maxItems: 6
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/CreatorPlatform"
+        allowedCountries:
+          type: array
+          minItems: 1
+          maxItems: 250
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/CampaignCountry"
+        minimumFollowers:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        niches:
+          type: array
+          minItems: 1
+          maxItems: 7
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/CreatorNiche"
+      required:
+        - title
+        - organizerName
+        - shortDescription
+        - objectives
+        - contentRequirements
+        - rewardAmount
+        - deadline
+        - acceptedPlatforms
+        - allowedCountries
+        - minimumFollowers
+        - niches
+    CampaignStatusInput:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          $ref: "#/components/schemas/CampaignStatus"
+      required: [status]
+    AdminCampaign:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        organizerName:
+          type: string
+        shortDescription:
+          type: string
+        objectives:
+          type: string
+        contentRequirements:
+          type: string
+        rewardAmount:
+          type: number
+        currency:
+          type: string
+        deadline:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        acceptedPlatforms:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreatorPlatform"
+        allowedCountries:
+          type: array
+          items:
+            $ref: "#/components/schemas/CampaignCountry"
+        minimumFollowers:
+          type: integer
+        niches:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreatorNiche"
+        status:
+          $ref: "#/components/schemas/CampaignStatus"
+        paymentRule:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - organizerName
+        - shortDescription
+        - objectives
+        - contentRequirements
+        - rewardAmount
+        - currency
+        - deadline
+        - acceptedPlatforms
+        - allowedCountries
+        - minimumFollowers
+        - niches
+        - status
+        - paymentRule
+        - createdAt
+        - updatedAt
+    AdminCampaignList:
+      type: object
+      properties:
+        campaigns:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCampaign"
+      required: [campaigns]
     ErrorResponse:
       type: object
       properties:

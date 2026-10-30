@@ -28,7 +28,7 @@ async function findAvailablePort() {
   return port;
 }
 
-test("signup, verification, role access, and logout stay isolated", async () => {
+test("signup, verification, profiles, campaigns, roles, and logout stay isolated", async () => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL is required for auth tests");
   assert.ok(process.env.SESSION_SECRET, "SESSION_SECRET is required for auth tests");
 
@@ -303,6 +303,174 @@ test("signup, verification, role access, and logout stay isolated", async () => 
     });
     assert.equal(adminToCreator.response.status, 403);
 
+    const campaignIdForDeniedWrites = randomUUID();
+    const validCampaignInput = {
+      title: "Creator tools launch",
+      organizerName: "Northstar Labs",
+      shortDescription: "A launch campaign for developer tools.",
+      objectives: "Introduce the product to developers.",
+      contentRequirements: "Publish one honest walkthrough.",
+      rewardAmount: 120.5,
+      deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10),
+      acceptedPlatforms: ["YouTube", "Instagram"],
+      allowedCountries: ["Any"],
+      minimumFollowers: 1000,
+      niches: ["Technology", "Developer tools"],
+    };
+    const creatorCampaignList = await request("/admin/campaigns", {
+      cookie: creatorLogin.cookie,
+    });
+    assert.equal(creatorCampaignList.response.status, 403);
+    const creatorCampaignCreate = await request("/admin/campaigns", {
+      method: "POST",
+      cookie: creatorLogin.cookie,
+      body: validCampaignInput,
+    });
+    assert.equal(creatorCampaignCreate.response.status, 403);
+    const creatorCampaignEdit = await request(
+      `/admin/campaigns/${campaignIdForDeniedWrites}`,
+      {
+        method: "PATCH",
+        cookie: creatorLogin.cookie,
+        body: validCampaignInput,
+      },
+    );
+    assert.equal(creatorCampaignEdit.response.status, 403);
+    const creatorCampaignStatus = await request(
+      `/admin/campaigns/${campaignIdForDeniedWrites}/status`,
+      {
+        method: "PATCH",
+        cookie: creatorLogin.cookie,
+        body: { status: "PUBLISHED" },
+      },
+    );
+    assert.equal(creatorCampaignStatus.response.status, 403);
+
+    const invalidPastDeadline = await request("/admin/campaigns", {
+      method: "POST",
+      cookie: adminLogin.cookie,
+      body: {
+        ...validCampaignInput,
+        deadline: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10),
+      },
+    });
+    assert.equal(invalidPastDeadline.response.status, 400);
+    const invalidReward = await request("/admin/campaigns", {
+      method: "POST",
+      cookie: adminLogin.cookie,
+      body: { ...validCampaignInput, rewardAmount: 0 },
+    });
+    assert.equal(invalidReward.response.status, 400);
+    const invalidCountries = await request("/admin/campaigns", {
+      method: "POST",
+      cookie: adminLogin.cookie,
+      body: { ...validCampaignInput, allowedCountries: ["Any", "IN"] },
+    });
+    assert.equal(invalidCountries.response.status, 400);
+
+    const campaignCreate = await request("/admin/campaigns", {
+      method: "POST",
+      cookie: adminLogin.cookie,
+      body: validCampaignInput,
+    });
+    assert.equal(campaignCreate.response.status, 201);
+    const campaignId = campaignCreate.body.id;
+    assert.equal(campaignCreate.body.status, "DRAFT");
+    assert.equal(campaignCreate.body.currency, "USD");
+    assert.equal(
+      campaignCreate.body.paymentRule,
+      "Payment is made only if your submission is accepted. If your work is not accepted, no payment will be made.",
+    );
+
+    const campaignList = await request("/admin/campaigns", {
+      cookie: adminLogin.cookie,
+    });
+    assert.equal(campaignList.response.status, 200);
+    assert.ok(
+      campaignList.body.campaigns.some((item) => item.id === campaignId),
+    );
+
+    const campaignEdit = await request(`/admin/campaigns/${campaignId}`, {
+      method: "PATCH",
+      cookie: adminLogin.cookie,
+      body: {
+        ...validCampaignInput,
+        title: "Creator tools launch — updated",
+        rewardAmount: 250.75,
+        currency: "INR",
+        allowedCountries: ["IN", "US"],
+      },
+    });
+    assert.equal(campaignEdit.response.status, 200);
+    assert.equal(campaignEdit.body.title, "Creator tools launch — updated");
+    assert.equal(campaignEdit.body.rewardAmount, 250.75);
+    assert.equal(campaignEdit.body.currency, "INR");
+    const attemptPaymentRuleEdit = await request(
+      `/admin/campaigns/${campaignId}`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: {
+          ...validCampaignInput,
+          paymentRule: "Pay everyone.",
+        },
+      },
+    );
+    assert.equal(attemptPaymentRuleEdit.response.status, 400);
+
+    const publishCampaign = await request(
+      `/admin/campaigns/${campaignId}/status`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "PUBLISHED" },
+      },
+    );
+    assert.equal(publishCampaign.response.status, 200);
+    assert.equal(publishCampaign.body.status, "PUBLISHED");
+    const unpublishCampaign = await request(
+      `/admin/campaigns/${campaignId}/status`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "DRAFT" },
+      },
+    );
+    assert.equal(unpublishCampaign.response.status, 200);
+    assert.equal(unpublishCampaign.body.status, "DRAFT");
+    const republishCampaign = await request(
+      `/admin/campaigns/${campaignId}/status`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "PUBLISHED" },
+      },
+    );
+    assert.equal(republishCampaign.response.status, 200);
+    const closeCampaign = await request(
+      `/admin/campaigns/${campaignId}/status`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "CLOSED" },
+      },
+    );
+    assert.equal(closeCampaign.response.status, 200);
+    assert.equal(closeCampaign.body.status, "CLOSED");
+    const reopenClosedCampaign = await request(
+      `/admin/campaigns/${campaignId}/status`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "PUBLISHED" },
+      },
+    );
+    assert.equal(reopenClosedCampaign.response.status, 400);
+
     const adminToCreatorProfile = await request("/creator/profile", {
       cookie: adminLogin.cookie,
     });
@@ -443,6 +611,13 @@ test("signup, verification, role access, and logout stay isolated", async () => 
   } finally {
     server.kill("SIGTERM");
     if (server.exitCode === null) await once(server, "exit").catch(() => {});
+    await db.query(
+      `DELETE FROM tech_sponsor_campaigns
+       WHERE created_by IN (
+         SELECT id FROM tech_sponsor_users WHERE email = ANY($1::text[])
+       )`,
+      [testEmails],
+    );
     await db.query(
       `DELETE FROM tech_sponsor_sessions
        WHERE user_id IN (

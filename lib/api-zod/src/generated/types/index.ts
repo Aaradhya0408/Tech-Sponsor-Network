@@ -6,11 +6,17 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminCampaign';
+export * from './adminCampaignList';
 export * from './adminCreatorProfile';
 export * from './adminCreatorProfiles';
 export * from './authMessage';
 export * from './authUser';
 export * from './authUserRole';
+export * from './campaignCountry';
+export * from './campaignInput';
+export * from './campaignStatus';
+export * from './campaignStatusInput';
 export * from './creatorApprovalDecision';
 export * from './creatorApprovalInput';
 export * from './creatorApprovalStatus';

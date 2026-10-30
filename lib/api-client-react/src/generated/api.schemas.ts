@@ -212,6 +212,112 @@ export interface CreatorPlatformVerificationInput {
   verified: boolean;
 }
 
+export type CampaignStatus = typeof CampaignStatus[keyof typeof CampaignStatus];
+
+
+export const CampaignStatus = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  CLOSED: 'CLOSED',
+} as const;
+
+/**
+ * ISO-style two-letter country code or Any
+ * @maxLength 3
+ * @pattern ^(Any|[A-Z]{2})$
+ */
+export type CampaignCountry = string;
+
+export interface CampaignInput {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  organizerName: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  shortDescription: string;
+  /**
+     * @minLength 1
+     * @maxLength 3000
+     */
+  objectives: string;
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  contentRequirements: string;
+  /**
+     * @minimum 0.01
+     * @maximum 9999999999.99
+     */
+  rewardAmount: number;
+  /**
+     * @minLength 3
+     * @maxLength 3
+     * @pattern ^[A-Z]{3}$
+     */
+  currency?: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  deadline: string;
+  /**
+     * @minItems 1
+     * @maxItems 6
+     */
+  acceptedPlatforms: CreatorPlatform[];
+  /**
+     * @minItems 1
+     * @maxItems 250
+     */
+  allowedCountries: CampaignCountry[];
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  minimumFollowers: number;
+  /**
+     * @minItems 1
+     * @maxItems 7
+     */
+  niches: CreatorNiche[];
+}
+
+export interface CampaignStatusInput {
+  status: CampaignStatus;
+}
+
+export interface AdminCampaign {
+  id: string;
+  title: string;
+  organizerName: string;
+  shortDescription: string;
+  objectives: string;
+  contentRequirements: string;
+  rewardAmount: number;
+  currency: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  deadline: string;
+  acceptedPlatforms: CreatorPlatform[];
+  allowedCountries: CampaignCountry[];
+  minimumFollowers: number;
+  niches: CreatorNiche[];
+  status: CampaignStatus;
+  paymentRule: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCampaignList {
+  campaigns: AdminCampaign[];
+}
+
 export interface ErrorResponse {
   error: string;
 }

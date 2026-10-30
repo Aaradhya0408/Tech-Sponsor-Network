@@ -324,3 +324,243 @@ export const UpdateCreatorPlatformVerificationResponse = zod.object({
 })
 
 
+/**
+ * @summary List campaigns for administrators
+ */
+export const listAdminCampaignsResponseCampaignsItemDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const listAdminCampaignsResponseCampaignsItemAllowedCountriesItemMax = 3;
+
+
+export const listAdminCampaignsResponseCampaignsItemAllowedCountriesItemRegExp = new RegExp('^(Any|[A-Z]{2})$');
+
+
+export const ListAdminCampaignsResponse = zod.object({
+  "campaigns": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "organizerName": zod.string(),
+  "shortDescription": zod.string(),
+  "objectives": zod.string(),
+  "contentRequirements": zod.string(),
+  "rewardAmount": zod.number(),
+  "currency": zod.string(),
+  "deadline": zod.string().regex(listAdminCampaignsResponseCampaignsItemDeadlineRegExp),
+  "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
+  "allowedCountries": zod.array(zod.string().max(listAdminCampaignsResponseCampaignsItemAllowedCountriesItemMax).regex(listAdminCampaignsResponseCampaignsItemAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
+  "minimumFollowers": zod.number().int(),
+  "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
+  "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "paymentRule": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Create a draft campaign
+ */
+export const createAdminCampaignBodyTitleMax = 160;
+
+export const createAdminCampaignBodyOrganizerNameMax = 120;
+
+export const createAdminCampaignBodyShortDescriptionMax = 500;
+
+export const createAdminCampaignBodyObjectivesMax = 3000;
+
+export const createAdminCampaignBodyContentRequirementsMax = 5000;
+
+export const createAdminCampaignBodyRewardAmountMin = 0.01;
+export const createAdminCampaignBodyRewardAmountMax = 9999999999.99;
+export const createAdminCampaignBodyRewardAmountMultipleOf = 0.01;
+
+export const createAdminCampaignBodyCurrencyDefault = `USD`;
+export const createAdminCampaignBodyCurrencyMin = 3;
+export const createAdminCampaignBodyCurrencyMax = 3;
+
+
+export const createAdminCampaignBodyCurrencyRegExp = new RegExp('^[A-Z]{3}$');
+export const createAdminCampaignBodyDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const createAdminCampaignBodyAcceptedPlatformsMax = 6;
+
+export const createAdminCampaignBodyAllowedCountriesItemMax = 3;
+
+
+export const createAdminCampaignBodyAllowedCountriesItemRegExp = new RegExp('^(Any|[A-Z]{2})$');
+export const createAdminCampaignBodyAllowedCountriesMax = 250;
+
+export const createAdminCampaignBodyMinimumFollowersMin = 0;
+export const createAdminCampaignBodyMinimumFollowersMax = 2147483647;
+
+export const createAdminCampaignBodyNichesMax = 7;
+
+
+
+export const CreateAdminCampaignBody = zod.object({
+  "title": zod.string().min(1).max(createAdminCampaignBodyTitleMax),
+  "organizerName": zod.string().min(1).max(createAdminCampaignBodyOrganizerNameMax),
+  "shortDescription": zod.string().min(1).max(createAdminCampaignBodyShortDescriptionMax),
+  "objectives": zod.string().min(1).max(createAdminCampaignBodyObjectivesMax),
+  "contentRequirements": zod.string().min(1).max(createAdminCampaignBodyContentRequirementsMax),
+  "rewardAmount": zod.number().min(createAdminCampaignBodyRewardAmountMin).max(createAdminCampaignBodyRewardAmountMax).multipleOf(createAdminCampaignBodyRewardAmountMultipleOf),
+  "currency": zod.string().min(createAdminCampaignBodyCurrencyMin).max(createAdminCampaignBodyCurrencyMax).regex(createAdminCampaignBodyCurrencyRegExp).default(createAdminCampaignBodyCurrencyDefault),
+  "deadline": zod.string().regex(createAdminCampaignBodyDeadlineRegExp),
+  "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])).min(1).max(createAdminCampaignBodyAcceptedPlatformsMax),
+  "allowedCountries": zod.array(zod.string().max(createAdminCampaignBodyAllowedCountriesItemMax).regex(createAdminCampaignBodyAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')).min(1).max(createAdminCampaignBodyAllowedCountriesMax),
+  "minimumFollowers": zod.number().int().min(createAdminCampaignBodyMinimumFollowersMin).max(createAdminCampaignBodyMinimumFollowersMax),
+  "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])).min(1).max(createAdminCampaignBodyNichesMax)
+})
+
+export const createAdminCampaignResponseDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const createAdminCampaignResponseAllowedCountriesItemMax = 3;
+
+
+export const createAdminCampaignResponseAllowedCountriesItemRegExp = new RegExp('^(Any|[A-Z]{2})$');
+
+
+export const CreateAdminCampaignResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "organizerName": zod.string(),
+  "shortDescription": zod.string(),
+  "objectives": zod.string(),
+  "contentRequirements": zod.string(),
+  "rewardAmount": zod.number(),
+  "currency": zod.string(),
+  "deadline": zod.string().regex(createAdminCampaignResponseDeadlineRegExp),
+  "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
+  "allowedCountries": zod.array(zod.string().max(createAdminCampaignResponseAllowedCountriesItemMax).regex(createAdminCampaignResponseAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
+  "minimumFollowers": zod.number().int(),
+  "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
+  "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "paymentRule": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Edit campaign details
+ */
+export const UpdateAdminCampaignParams = zod.object({
+  "campaignId": zod.coerce.string().uuid()
+})
+
+export const updateAdminCampaignBodyTitleMax = 160;
+
+export const updateAdminCampaignBodyOrganizerNameMax = 120;
+
+export const updateAdminCampaignBodyShortDescriptionMax = 500;
+
+export const updateAdminCampaignBodyObjectivesMax = 3000;
+
+export const updateAdminCampaignBodyContentRequirementsMax = 5000;
+
+export const updateAdminCampaignBodyRewardAmountMin = 0.01;
+export const updateAdminCampaignBodyRewardAmountMax = 9999999999.99;
+export const updateAdminCampaignBodyRewardAmountMultipleOf = 0.01;
+
+export const updateAdminCampaignBodyCurrencyDefault = `USD`;
+export const updateAdminCampaignBodyCurrencyMin = 3;
+export const updateAdminCampaignBodyCurrencyMax = 3;
+
+
+export const updateAdminCampaignBodyCurrencyRegExp = new RegExp('^[A-Z]{3}$');
+export const updateAdminCampaignBodyDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const updateAdminCampaignBodyAcceptedPlatformsMax = 6;
+
+export const updateAdminCampaignBodyAllowedCountriesItemMax = 3;
+
+
+export const updateAdminCampaignBodyAllowedCountriesItemRegExp = new RegExp('^(Any|[A-Z]{2})$');
+export const updateAdminCampaignBodyAllowedCountriesMax = 250;
+
+export const updateAdminCampaignBodyMinimumFollowersMin = 0;
+export const updateAdminCampaignBodyMinimumFollowersMax = 2147483647;
+
+export const updateAdminCampaignBodyNichesMax = 7;
+
+
+
+export const UpdateAdminCampaignBody = zod.object({
+  "title": zod.string().min(1).max(updateAdminCampaignBodyTitleMax),
+  "organizerName": zod.string().min(1).max(updateAdminCampaignBodyOrganizerNameMax),
+  "shortDescription": zod.string().min(1).max(updateAdminCampaignBodyShortDescriptionMax),
+  "objectives": zod.string().min(1).max(updateAdminCampaignBodyObjectivesMax),
+  "contentRequirements": zod.string().min(1).max(updateAdminCampaignBodyContentRequirementsMax),
+  "rewardAmount": zod.number().min(updateAdminCampaignBodyRewardAmountMin).max(updateAdminCampaignBodyRewardAmountMax).multipleOf(updateAdminCampaignBodyRewardAmountMultipleOf),
+  "currency": zod.string().min(updateAdminCampaignBodyCurrencyMin).max(updateAdminCampaignBodyCurrencyMax).regex(updateAdminCampaignBodyCurrencyRegExp).default(updateAdminCampaignBodyCurrencyDefault),
+  "deadline": zod.string().regex(updateAdminCampaignBodyDeadlineRegExp),
+  "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])).min(1).max(updateAdminCampaignBodyAcceptedPlatformsMax),
+  "allowedCountries": zod.array(zod.string().max(updateAdminCampaignBodyAllowedCountriesItemMax).regex(updateAdminCampaignBodyAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')).min(1).max(updateAdminCampaignBodyAllowedCountriesMax),
+  "minimumFollowers": zod.number().int().min(updateAdminCampaignBodyMinimumFollowersMin).max(updateAdminCampaignBodyMinimumFollowersMax),
+  "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])).min(1).max(updateAdminCampaignBodyNichesMax)
+})
+
+export const updateAdminCampaignResponseDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const updateAdminCampaignResponseAllowedCountriesItemMax = 3;
+
+
+export const updateAdminCampaignResponseAllowedCountriesItemRegExp = new RegExp('^(Any|[A-Z]{2})$');
+
+
+export const UpdateAdminCampaignResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "organizerName": zod.string(),
+  "shortDescription": zod.string(),
+  "objectives": zod.string(),
+  "contentRequirements": zod.string(),
+  "rewardAmount": zod.number(),
+  "currency": zod.string(),
+  "deadline": zod.string().regex(updateAdminCampaignResponseDeadlineRegExp),
+  "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
+  "allowedCountries": zod.array(zod.string().max(updateAdminCampaignResponseAllowedCountriesItemMax).regex(updateAdminCampaignResponseAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
+  "minimumFollowers": zod.number().int(),
+  "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
+  "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "paymentRule": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Publish, unpublish, or close a campaign
+ */
+export const UpdateAdminCampaignStatusParams = zod.object({
+  "campaignId": zod.coerce.string().uuid()
+})
+
+export const UpdateAdminCampaignStatusBody = zod.object({
+  "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED'])
+})
+
+export const updateAdminCampaignStatusResponseDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const updateAdminCampaignStatusResponseAllowedCountriesItemMax = 3;
+
+
+export const updateAdminCampaignStatusResponseAllowedCountriesItemRegExp = new RegExp('^(Any|[A-Z]{2})$');
+
+
+export const UpdateAdminCampaignStatusResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "organizerName": zod.string(),
+  "shortDescription": zod.string(),
+  "objectives": zod.string(),
+  "contentRequirements": zod.string(),
+  "rewardAmount": zod.number(),
+  "currency": zod.string(),
+  "deadline": zod.string().regex(updateAdminCampaignStatusResponseDeadlineRegExp),
+  "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
+  "allowedCountries": zod.array(zod.string().max(updateAdminCampaignStatusResponseAllowedCountriesItemMax).regex(updateAdminCampaignStatusResponseAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
+  "minimumFollowers": zod.number().int(),
+  "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
+  "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "paymentRule": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+

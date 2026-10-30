@@ -22,6 +22,7 @@ import {
 } from '@workspace/api-client-react';
 import type { AuthUser, CreatorProfileInput, CreatorPlatform, CreatorNiche, CreatorProfile, AdminCreatorProfile, AdminCreatorProfiles } from '@workspace/api-client-react';
 import { ErrorBoundary } from '@/components/error-boundary';
+import AdminCampaigns from '@/components/admin-campaigns';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
@@ -288,7 +289,7 @@ function DevelopmentVerificationLink({ url }: { url: string }) {
 function DashboardShell({ user, admin = false, onLogout, children }: { user: AuthUser; admin?: boolean; onLogout: () => void; children: ReactNode }) {
   return <main className="min-h-[100dvh] bg-background">
     <header className="flex min-h-[76px] items-center justify-between border-b border-border/80 px-5 sm:px-9 lg:px-[7vw]">
-      <Brand /><div className="flex items-center gap-3 sm:gap-5"><span className="hidden text-xs text-muted-foreground sm:block">{admin ? 'Network administration' : 'Creator member'}</span><button onClick={onLogout} data-testid="button-logout" className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-2 text-xs font-semibold transition hover:bg-muted"><LogOut size={14} /> Sign out</button></div>
+      <Brand /><div className="flex items-center gap-2 sm:gap-5">{admin && <Link href="/admin/campaigns" data-testid="link-admin-campaigns" className="rounded-full border border-primary/30 px-3.5 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 sm:px-4">Campaigns</Link>}<span className="hidden text-xs text-muted-foreground sm:block">{admin ? 'Network administration' : 'Creator member'}</span><button onClick={onLogout} data-testid="button-logout" className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-2 text-xs font-semibold transition hover:bg-muted"><LogOut size={14} /> Sign out</button></div>
     </header>
     <section className="mx-auto max-w-[1120px] px-5 py-10 sm:px-9 sm:py-14">
       <div className="page-enter">
@@ -646,6 +647,7 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/dashboard"><Dashboard /></Route>
         <Route path="/admin/dashboard"><Dashboard admin /></Route>
+        <Route path="/admin/campaigns" component={AdminCampaigns} />
         <Route component={NotFound} />
       </Switch>
     </ErrorBoundary>

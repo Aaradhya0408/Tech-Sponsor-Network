@@ -20,9 +20,13 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminCampaign,
+  AdminCampaignList,
   AdminCreatorProfiles,
   AuthMessage,
   AuthUser,
+  CampaignInput,
+  CampaignStatusInput,
   CreatorApprovalInput,
   CreatorPlatform,
   CreatorPlatformVerificationInput,
@@ -1219,5 +1223,348 @@ export const useUpdateCreatorPlatformVerification = <TError = ErrorType<ErrorRes
         TContext
       > => {
       return useMutation(getUpdateCreatorPlatformVerificationMutationOptions(options));
+    }
+
+export const getListAdminCampaignsUrl = () => {
+
+
+
+
+  return `/api/admin/campaigns`
+}
+
+/**
+ * @summary List campaigns for administrators
+ */
+export const listAdminCampaigns = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignList> => {
+
+  return customFetch<AdminCampaignList>(getListAdminCampaignsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminCampaignsQueryKey = () => {
+    return [
+    `/api/admin/campaigns`
+    ] as const;
+    }
+
+
+export const getListAdminCampaignsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCampaigns>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminCampaignsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCampaigns>>> = ({ signal }) => listAdminCampaigns({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaigns>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminCampaignsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminCampaigns>>>
+export type ListAdminCampaignsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List campaigns for administrators
+ */
+
+export function useListAdminCampaigns<TData = Awaited<ReturnType<typeof listAdminCampaigns>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminCampaignsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminCampaignUrl = () => {
+
+
+
+
+  return `/api/admin/campaigns`
+}
+
+/**
+ * @summary Create a draft campaign
+ */
+export const createAdminCampaign = async (campaignInput: CampaignInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaign> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminCampaign>(getCreateAdminCampaignUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(campaignInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminCampaignMutationKey = () => ['createAdminCampaign'] as const;
+
+export const getCreateAdminCampaignMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminCampaign>>, TError,CreateAdminCampaignMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminCampaign>>, TError,CreateAdminCampaignMutationVariables, TContext> => {
+
+const mutationKey = getCreateAdminCampaignMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminCampaign>>, CreateAdminCampaignMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminCampaign(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminCampaignMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminCampaign>>>
+    export type CreateAdminCampaignMutationBody = BodyType<CampaignInput>
+    export type CreateAdminCampaignMutationError = ErrorType<ErrorResponse>
+    export type CreateAdminCampaignMutationVariables = {data: BodyType<CampaignInput>}
+
+    /**
+ * @summary Create a draft campaign
+ */
+export const useCreateAdminCampaign = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminCampaign>>, TError,CreateAdminCampaignMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminCampaign>>,
+        TError,
+        CreateAdminCampaignMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAdminCampaignMutationOptions(options));
+    }
+
+export const getUpdateAdminCampaignUrl = (campaignId: string,) => {
+
+
+
+
+  return `/api/admin/campaigns/${campaignId}`
+}
+
+/**
+ * @summary Edit campaign details
+ */
+export const updateAdminCampaign = async (campaignId: string,
+    campaignInput: CampaignInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaign> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminCampaign>(getUpdateAdminCampaignUrl(campaignId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(campaignInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminCampaignMutationKey = () => ['updateAdminCampaign'] as const;
+
+export const getUpdateAdminCampaignMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaign>>, TError,UpdateAdminCampaignMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaign>>, TError,UpdateAdminCampaignMutationVariables, TContext> => {
+
+const mutationKey = getUpdateAdminCampaignMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminCampaign>>, UpdateAdminCampaignMutationVariables> = (props) => {
+          const {campaignId,data} = props ?? {};
+
+          return  updateAdminCampaign(campaignId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminCampaignMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminCampaign>>>
+    export type UpdateAdminCampaignMutationBody = BodyType<CampaignInput>
+    export type UpdateAdminCampaignMutationError = ErrorType<ErrorResponse>
+    export type UpdateAdminCampaignMutationVariables = {campaignId: string;data: BodyType<CampaignInput>}
+
+    /**
+ * @summary Edit campaign details
+ */
+export const useUpdateAdminCampaign = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaign>>, TError,UpdateAdminCampaignMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminCampaign>>,
+        TError,
+        UpdateAdminCampaignMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateAdminCampaignMutationOptions(options));
+    }
+
+export const getUpdateAdminCampaignStatusUrl = (campaignId: string,) => {
+
+
+
+
+  return `/api/admin/campaigns/${campaignId}/status`
+}
+
+/**
+ * @summary Publish, unpublish, or close a campaign
+ */
+export const updateAdminCampaignStatus = async (campaignId: string,
+    campaignStatusInput: CampaignStatusInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaign> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminCampaign>(getUpdateAdminCampaignStatusUrl(campaignId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(campaignStatusInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminCampaignStatusMutationKey = () => ['updateAdminCampaignStatus'] as const;
+
+export const getUpdateAdminCampaignStatusMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaignStatus>>, TError,UpdateAdminCampaignStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaignStatus>>, TError,UpdateAdminCampaignStatusMutationVariables, TContext> => {
+
+const mutationKey = getUpdateAdminCampaignStatusMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminCampaignStatus>>, UpdateAdminCampaignStatusMutationVariables> = (props) => {
+          const {campaignId,data} = props ?? {};
+
+          return  updateAdminCampaignStatus(campaignId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminCampaignStatusMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminCampaignStatus>>>
+    export type UpdateAdminCampaignStatusMutationBody = BodyType<CampaignStatusInput>
+    export type UpdateAdminCampaignStatusMutationError = ErrorType<ErrorResponse>
+    export type UpdateAdminCampaignStatusMutationVariables = {campaignId: string;data: BodyType<CampaignStatusInput>}
+
+    /**
+ * @summary Publish, unpublish, or close a campaign
+ */
+export const useUpdateAdminCampaignStatus = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaignStatus>>, TError,UpdateAdminCampaignStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminCampaignStatus>>,
+        TError,
+        UpdateAdminCampaignStatusMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateAdminCampaignStatusMutationOptions(options));
     }
 
