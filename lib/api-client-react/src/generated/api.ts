@@ -21,13 +21,17 @@ import type {
 
 import type {
   AdminCampaign,
+  AdminCampaignApplicationList,
   AdminCampaignList,
   AdminCreatorProfiles,
   AuthMessage,
   AuthUser,
+  CampaignApplicationInput,
   CampaignInput,
   CampaignStatusInput,
   CreatorApprovalInput,
+  CreatorCampaignApplication,
+  CreatorCampaignApplicationList,
   CreatorPlatform,
   CreatorPlatformVerificationInput,
   CreatorProfile,
@@ -1367,6 +1371,251 @@ export function useGetCreatorCampaign<TData = Awaited<ReturnType<typeof getCreat
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetCreatorCampaignQueryOptions(campaignId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListCreatorApplicationsUrl = () => {
+
+
+
+
+  return `/api/creator/applications`
+}
+
+/**
+ * @summary List the signed-in creator's campaign applications
+ */
+export const listCreatorApplications = async ( options?: Parameters<typeof customFetch>[1]): Promise<CreatorCampaignApplicationList> => {
+
+  return customFetch<CreatorCampaignApplicationList>(getListCreatorApplicationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCreatorApplicationsQueryKey = () => {
+    return [
+    `/api/creator/applications`
+    ] as const;
+    }
+
+
+export const getListCreatorApplicationsQueryOptions = <TData = Awaited<ReturnType<typeof listCreatorApplications>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCreatorApplicationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCreatorApplications>>> = ({ signal }) => listCreatorApplications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCreatorApplications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCreatorApplicationsQueryResult = NonNullable<Awaited<ReturnType<typeof listCreatorApplications>>>
+export type ListCreatorApplicationsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List the signed-in creator's campaign applications
+ */
+
+export function useListCreatorApplications<TData = Awaited<ReturnType<typeof listCreatorApplications>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCreatorApplicationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateCreatorCampaignApplicationUrl = (campaignId: string,) => {
+
+
+
+
+  return `/api/creator/campaigns/${campaignId}/applications`
+}
+
+/**
+ * A creator can apply once before the campaign deadline if their profile is approved and eligible.
+ * @summary Apply to an eligible published campaign
+ */
+export const createCreatorCampaignApplication = async (campaignId: string,
+    campaignApplicationInput: CampaignApplicationInput, options?: Parameters<typeof customFetch>[1]): Promise<CreatorCampaignApplication> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CreatorCampaignApplication>(getCreateCreatorCampaignApplicationUrl(campaignId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(campaignApplicationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCreatorCampaignApplicationMutationKey = () => ['createCreatorCampaignApplication'] as const;
+
+export const getCreateCreatorCampaignApplicationMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreatorCampaignApplication>>, TError,CreateCreatorCampaignApplicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCreatorCampaignApplication>>, TError,CreateCreatorCampaignApplicationMutationVariables, TContext> => {
+
+const mutationKey = getCreateCreatorCampaignApplicationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCreatorCampaignApplication>>, CreateCreatorCampaignApplicationMutationVariables> = (props) => {
+          const {campaignId,data} = props ?? {};
+
+          return  createCreatorCampaignApplication(campaignId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCreatorCampaignApplicationMutationResult = NonNullable<Awaited<ReturnType<typeof createCreatorCampaignApplication>>>
+    export type CreateCreatorCampaignApplicationMutationBody = BodyType<CampaignApplicationInput>
+    export type CreateCreatorCampaignApplicationMutationError = ErrorType<ErrorResponse>
+    export type CreateCreatorCampaignApplicationMutationVariables = {campaignId: string;data: BodyType<CampaignApplicationInput>}
+
+    /**
+ * @summary Apply to an eligible published campaign
+ */
+export const useCreateCreatorCampaignApplication = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreatorCampaignApplication>>, TError,CreateCreatorCampaignApplicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCreatorCampaignApplication>>,
+        TError,
+        CreateCreatorCampaignApplicationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCreatorCampaignApplicationMutationOptions(options));
+    }
+
+export const getListAdminCampaignApplicationsUrl = () => {
+
+
+
+
+  return `/api/admin/applications`
+}
+
+/**
+ * Read-only application records grouped by campaign in the admin interface.
+ * @summary List campaign applications for administrators
+ */
+export const listAdminCampaignApplications = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignApplicationList> => {
+
+  return customFetch<AdminCampaignApplicationList>(getListAdminCampaignApplicationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminCampaignApplicationsQueryKey = () => {
+    return [
+    `/api/admin/applications`
+    ] as const;
+    }
+
+
+export const getListAdminCampaignApplicationsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminCampaignApplicationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCampaignApplications>>> = ({ signal }) => listAdminCampaignApplications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminCampaignApplicationsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminCampaignApplications>>>
+export type ListAdminCampaignApplicationsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List campaign applications for administrators
+ */
+
+export function useListAdminCampaignApplications<TData = Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminCampaignApplicationsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

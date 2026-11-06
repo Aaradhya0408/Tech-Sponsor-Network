@@ -4,6 +4,8 @@ import authRouter from "./auth";
 import creatorProfilesRouter from "./creator-profiles";
 import adminCampaignsRouter from "./admin-campaigns";
 import creatorCampaignsRouter from "./creator-campaigns";
+import creatorApplicationsRouter from "./creator-applications";
+import adminApplicationsRouter from "./admin-applications";
 
 const router: IRouter = Router();
 
@@ -12,5 +14,7 @@ router.use(authRouter);
 router.use(creatorProfilesRouter);
 router.use(adminCampaignsRouter);
 router.use(creatorCampaignsRouter);
+router.use(creatorApplicationsRouter);
+router.use(adminApplicationsRouter);
 
 export default router;

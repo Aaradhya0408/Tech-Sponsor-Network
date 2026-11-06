@@ -684,6 +684,83 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     assert.equal(resubmitted.body.approvalStatus, "PENDING_APPROVAL");
     assert.equal(resubmitted.body.rejectionReason, null);
 
+    const validApplicationMessage =
+      "My AI tutorials help developers evaluate new tools with practical examples.";
+    const applicationCampaignInput = {
+      ...validCampaignInput,
+      title: `Application test campaign ${suffix}`,
+      acceptedPlatforms: ["YouTube"],
+      allowedCountries: ["IN"],
+      minimumFollowers: 5000,
+      niches: ["AI"],
+    };
+    const applicationCampaign = await request("/admin/campaigns", {
+      method: "POST",
+      cookie: adminLogin.cookie,
+      body: applicationCampaignInput,
+    });
+    assert.equal(applicationCampaign.response.status, 201);
+    const applicationCampaignId = applicationCampaign.body.id;
+
+    const applicationDraftAttempt = await request(
+      `/creator/campaigns/${applicationCampaignId}/applications`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          personalMessage: validApplicationMessage,
+          paymentRuleAcknowledged: true,
+        },
+      },
+    );
+    assert.equal(applicationDraftAttempt.response.status, 404);
+
+    const publishApplicationCampaign = await request(
+      `/admin/campaigns/${applicationCampaignId}/status`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "PUBLISHED" },
+      },
+    );
+    assert.equal(publishApplicationCampaign.response.status, 200);
+
+    const pendingCreatorApply = await request(
+      `/creator/campaigns/${applicationCampaignId}/applications`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          personalMessage: validApplicationMessage,
+          paymentRuleAcknowledged: true,
+        },
+      },
+    );
+    assert.equal(pendingCreatorApply.response.status, 403);
+
+    const ineligibleCampaign = await request("/admin/campaigns", {
+      method: "POST",
+      cookie: adminLogin.cookie,
+      body: {
+        ...applicationCampaignInput,
+        title: `Ineligible application test ${suffix}`,
+        allowedCountries: ["US"],
+        minimumFollowers: 6000,
+        niches: ["Business"],
+      },
+    });
+    assert.equal(ineligibleCampaign.response.status, 201);
+    const ineligibleCampaignId = ineligibleCampaign.body.id;
+    const publishIneligibleCampaign = await request(
+      `/admin/campaigns/${ineligibleCampaignId}/status`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "PUBLISHED" },
+      },
+    );
+    assert.equal(publishIneligibleCampaign.response.status, 200);
+
     const approved = await request(
       `/admin/creator-profiles/${creatorRecord.userId}/approval`,
       {
@@ -693,6 +770,156 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       },
     );
     assert.equal(approved.response.status, 200);
+
+    const invalidShortApplication = await request(
+      `/creator/campaigns/${applicationCampaignId}/applications`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          personalMessage: "Too short",
+          paymentRuleAcknowledged: true,
+        },
+      },
+    );
+    assert.equal(invalidShortApplication.response.status, 400);
+    const missingPaymentAcknowledgement = await request(
+      `/creator/campaigns/${applicationCampaignId}/applications`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          personalMessage: validApplicationMessage,
+          paymentRuleAcknowledged: false,
+        },
+      },
+    );
+    assert.equal(missingPaymentAcknowledgement.response.status, 400);
+
+    const ineligibleCreatorApply = await request(
+      `/creator/campaigns/${ineligibleCampaignId}/applications`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          personalMessage: validApplicationMessage,
+          paymentRuleAcknowledged: true,
+        },
+      },
+    );
+    assert.equal(ineligibleCreatorApply.response.status, 403);
+    assert.match(
+      ineligibleCreatorApply.body.error,
+      /country is not in the allowed list/i,
+    );
+    assert.match(ineligibleCreatorApply.body.error, /niche does not match/i);
+    assert.match(ineligibleCreatorApply.body.error, /6,?000 followers/i);
+
+    const createApplication = await request(
+      `/creator/campaigns/${applicationCampaignId}/applications`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          personalMessage: validApplicationMessage,
+          paymentRuleAcknowledged: true,
+        },
+      },
+    );
+    assert.equal(
+      createApplication.response.status,
+      201,
+      createApplication.body.error,
+    );
+    assert.equal(createApplication.body.status, "UNDER_REVIEW");
+    assert.equal(
+      createApplication.body.campaignTitle,
+      applicationCampaignInput.title,
+    );
+    const applicationId = createApplication.body.id;
+
+    const duplicateApplication = await request(
+      `/creator/campaigns/${applicationCampaignId}/applications`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          personalMessage: validApplicationMessage,
+          paymentRuleAcknowledged: true,
+        },
+      },
+    );
+    assert.equal(duplicateApplication.response.status, 409);
+
+    const creatorApplications = await request("/creator/applications", {
+      cookie: creatorLogin.cookie,
+    });
+    assert.equal(creatorApplications.response.status, 200);
+    assert.ok(
+      creatorApplications.body.applications.some(
+        (item) =>
+          item.id === applicationId &&
+          item.campaignTitle === applicationCampaignInput.title &&
+          item.status === "UNDER_REVIEW",
+      ),
+    );
+    const otherCreatorApplications = await request("/creator/applications", {
+      cookie: otherCreatorLogin.cookie,
+    });
+    assert.equal(otherCreatorApplications.response.status, 200);
+    assert.ok(
+      !otherCreatorApplications.body.applications.some(
+        (item) => item.id === applicationId,
+      ),
+      "creators can only list their own applications",
+    );
+    const adminCannotListCreatorApplications = await request(
+      "/creator/applications",
+      { cookie: adminLogin.cookie },
+    );
+    assert.equal(adminCannotListCreatorApplications.response.status, 403);
+
+    const adminApplications = await request("/admin/applications", {
+      cookie: adminLogin.cookie,
+    });
+    assert.equal(adminApplications.response.status, 200);
+    const adminApplication = adminApplications.body.applications.find(
+      (item) => item.id === applicationId,
+    );
+    assert.equal(adminApplication?.campaignTitle, applicationCampaignInput.title);
+    assert.equal(adminApplication?.creatorName, "Auth Test Creator");
+    assert.equal(adminApplication?.personalMessage, validApplicationMessage);
+    assert.equal(adminApplication?.paymentRuleAcknowledged, true);
+    assert.equal(adminApplication?.status, "UNDER_REVIEW");
+    const creatorCannotListAdminApplications = await request(
+      "/admin/applications",
+      { cookie: creatorLogin.cookie },
+    );
+    assert.equal(creatorCannotListAdminApplications.response.status, 403);
+    const expiredCampaignApply = await request(
+      `/creator/campaigns/${expiredCampaignId}/applications`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          personalMessage: validApplicationMessage,
+          paymentRuleAcknowledged: true,
+        },
+      },
+    );
+    assert.equal(expiredCampaignApply.response.status, 404);
+    const closedCampaignApply = await request(
+      `/creator/campaigns/${campaignId}/applications`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          personalMessage: validApplicationMessage,
+          paymentRuleAcknowledged: true,
+        },
+      },
+    );
+    assert.equal(closedCampaignApply.response.status, 404);
 
     const finalCreatorList = await request("/admin/creator-profiles", {
       cookie: adminLogin.cookie,

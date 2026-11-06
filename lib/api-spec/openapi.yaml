@@ -20,6 +20,10 @@ tags:
     description: Admin-only campaign management
   - name: creator-campaigns
     description: Published campaigns available to creators
+  - name: creator-applications
+    description: Creator campaign applications
+  - name: admin-applications
+    description: Read-only campaign application review
 paths:
   /healthz:
     get:
@@ -492,6 +496,117 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Campaign not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /creator/applications:
+    get:
+      operationId: listCreatorApplications
+      tags: [creator-applications]
+      summary: List the signed-in creator's campaign applications
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Applications belonging to the signed-in creator
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorCampaignApplicationList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Creator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /creator/campaigns/{campaignId}/applications:
+    post:
+      operationId: createCreatorCampaignApplication
+      tags: [creator-applications]
+      summary: Apply to an eligible published campaign
+      description: A creator can apply once before the campaign deadline if their profile is approved and eligible.
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignApplicationInput"
+      responses:
+        "201":
+          description: Application submitted for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorCampaignApplication"
+        "400":
+          description: Application message or payment-rule acknowledgement is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Creator profile is not approved or eligible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Campaign is no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Creator has already applied to this campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/applications:
+    get:
+      operationId: listAdminCampaignApplications
+      tags: [admin-applications]
+      summary: List campaign applications for administrators
+      description: Read-only application records grouped by campaign in the admin interface.
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Campaign applications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaignApplicationList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
           content:
             application/json:
               schema:
@@ -1095,6 +1210,96 @@ components:
           items:
             $ref: "#/components/schemas/AdminCampaign"
       required: [campaigns]
+    CampaignApplicationStatus:
+      type: string
+      enum: [UNDER_REVIEW, ACCEPTED, NOT_SELECTED, WINNER, PAID]
+    CampaignApplicationInput:
+      type: object
+      additionalProperties: false
+      properties:
+        personalMessage:
+          type: string
+          minLength: 20
+          maxLength: 1000
+        paymentRuleAcknowledged:
+          type: boolean
+          description: Must be true to record agreement to the fixed payment rule
+      required: [personalMessage, paymentRuleAcknowledged]
+    CreatorCampaignApplication:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignTitle:
+          type: string
+        personalMessage:
+          type: string
+        paymentRuleAcknowledged:
+          type: boolean
+        status:
+          $ref: "#/components/schemas/CampaignApplicationStatus"
+        appliedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - campaignId
+        - campaignTitle
+        - personalMessage
+        - paymentRuleAcknowledged
+        - status
+        - appliedAt
+    CreatorCampaignApplicationList:
+      type: object
+      properties:
+        applications:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreatorCampaignApplication"
+      required: [applications]
+    AdminCampaignApplication:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignTitle:
+          type: string
+        creatorName:
+          type: string
+        personalMessage:
+          type: string
+        paymentRuleAcknowledged:
+          type: boolean
+        status:
+          $ref: "#/components/schemas/CampaignApplicationStatus"
+        appliedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - campaignId
+        - campaignTitle
+        - creatorName
+        - personalMessage
+        - paymentRuleAcknowledged
+        - status
+        - appliedAt
+    AdminCampaignApplicationList:
+      type: object
+      properties:
+        applications:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCampaignApplication"
+      required: [applications]
     ErrorResponse:
       type: object
       properties:

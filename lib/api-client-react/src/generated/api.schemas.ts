@@ -318,6 +318,56 @@ export interface AdminCampaignList {
   campaigns: AdminCampaign[];
 }
 
+export type CampaignApplicationStatus = typeof CampaignApplicationStatus[keyof typeof CampaignApplicationStatus];
+
+
+export const CampaignApplicationStatus = {
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  ACCEPTED: 'ACCEPTED',
+  NOT_SELECTED: 'NOT_SELECTED',
+  WINNER: 'WINNER',
+  PAID: 'PAID',
+} as const;
+
+export interface CampaignApplicationInput {
+  /**
+     * @minLength 20
+     * @maxLength 1000
+     */
+  personalMessage: string;
+  /** Must be true to record agreement to the fixed payment rule */
+  paymentRuleAcknowledged: boolean;
+}
+
+export interface CreatorCampaignApplication {
+  id: string;
+  campaignId: string;
+  campaignTitle: string;
+  personalMessage: string;
+  paymentRuleAcknowledged: boolean;
+  status: CampaignApplicationStatus;
+  appliedAt: string;
+}
+
+export interface CreatorCampaignApplicationList {
+  applications: CreatorCampaignApplication[];
+}
+
+export interface AdminCampaignApplication {
+  id: string;
+  campaignId: string;
+  campaignTitle: string;
+  creatorName: string;
+  personalMessage: string;
+  paymentRuleAcknowledged: boolean;
+  status: CampaignApplicationStatus;
+  appliedAt: string;
+}
+
+export interface AdminCampaignApplicationList {
+  applications: AdminCampaignApplication[];
+}
+
 export interface ErrorResponse {
   error: string;
 }

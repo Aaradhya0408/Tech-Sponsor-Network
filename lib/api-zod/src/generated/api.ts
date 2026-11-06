@@ -393,6 +393,69 @@ export const GetCreatorCampaignResponse = zod.object({
 
 
 /**
+ * @summary List the signed-in creator's campaign applications
+ */
+export const ListCreatorApplicationsResponse = zod.object({
+  "applications": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "campaignId": zod.string().uuid(),
+  "campaignTitle": zod.string(),
+  "personalMessage": zod.string(),
+  "paymentRuleAcknowledged": zod.boolean(),
+  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
+  "appliedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * A creator can apply once before the campaign deadline if their profile is approved and eligible.
+ * @summary Apply to an eligible published campaign
+ */
+export const CreateCreatorCampaignApplicationParams = zod.object({
+  "campaignId": zod.coerce.string().uuid()
+})
+
+export const createCreatorCampaignApplicationBodyPersonalMessageMin = 20;
+export const createCreatorCampaignApplicationBodyPersonalMessageMax = 1000;
+
+
+
+export const CreateCreatorCampaignApplicationBody = zod.object({
+  "personalMessage": zod.string().min(createCreatorCampaignApplicationBodyPersonalMessageMin).max(createCreatorCampaignApplicationBodyPersonalMessageMax),
+  "paymentRuleAcknowledged": zod.boolean().describe('Must be true to record agreement to the fixed payment rule')
+})
+
+export const CreateCreatorCampaignApplicationResponse = zod.object({
+  "id": zod.string().uuid(),
+  "campaignId": zod.string().uuid(),
+  "campaignTitle": zod.string(),
+  "personalMessage": zod.string(),
+  "paymentRuleAcknowledged": zod.boolean(),
+  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
+  "appliedAt": zod.coerce.date()
+})
+
+
+/**
+ * Read-only application records grouped by campaign in the admin interface.
+ * @summary List campaign applications for administrators
+ */
+export const ListAdminCampaignApplicationsResponse = zod.object({
+  "applications": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "campaignId": zod.string().uuid(),
+  "campaignTitle": zod.string(),
+  "creatorName": zod.string(),
+  "personalMessage": zod.string(),
+  "paymentRuleAcknowledged": zod.boolean(),
+  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
+  "appliedAt": zod.coerce.date()
+}))
+})
+
+
+/**
  * @summary List campaigns for administrators
  */
 export const listAdminCampaignsResponseCampaignsItemDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
