@@ -1,1 +1,2 @@
 - [Verification link rotation](verification-link-rotation.md) — a resend invalidates older pending links, keeping one usable token per unverified account.
+- [API response contracts](api-response-contracts.md) — Zod-parse every response with all fields required by the generated contract; omissions can turn successful writes into 500s.

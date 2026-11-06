@@ -104,9 +104,18 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
+    const responseText = await response.text();
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(responseText);
+    } catch {
+      throw new Error(
+        `Expected JSON for ${method} ${path}, received HTTP ${response.status}: ${responseText.slice(0, 160)}\nServer output:\n${output.slice(-2400)}`,
+      );
+    }
     return {
       response,
-      body: await response.json(),
+      body: parsedBody,
       cookie: response.headers.get("set-cookie")?.split(";")[0] ?? null,
     };
   }
@@ -678,7 +687,17 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     const resubmitted = await request("/creator/profile", {
       method: "PUT",
       cookie: creatorLogin.cookie,
-      body: { ...profileInput, bio: "Updated creator bio." },
+      body: {
+        ...profileInput,
+        bio: "Updated creator bio.",
+        platforms: [
+          {
+            ...profileInput.platforms[0],
+            followers: 5000,
+            url: "https://youtube.com/@auth-test-creator-updated",
+          },
+        ],
+      },
     });
     assert.equal(resubmitted.response.status, 200);
     assert.equal(resubmitted.body.approvalStatus, "PENDING_APPROVAL");

@@ -1,18 +1,26 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CheckCircle2, Filter, Globe2, Search, ShieldCheck, SlidersHorizontal, UsersRound, XCircle } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CheckCircle2, Filter, Globe2, Search, ShieldCheck, SlidersHorizontal, UsersRound, XCircle, Send, CircleCheck } from 'lucide-react';
 import { Link, useLocation, useParams } from 'wouter';
 import {
   getGetCreatorProfileQueryKey,
   getGetCurrentUserQueryKey,
   getGetCreatorCampaignQueryKey,
   getListCreatorCampaignsQueryKey,
+  getListCreatorApplicationsQueryKey,
+  useListCreatorApplications,
+  useCreateCreatorCampaignApplication,
   useGetCreatorProfile,
   useGetCurrentUser,
   useGetCreatorCampaign,
   useListCreatorCampaigns,
 } from '@workspace/api-client-react';
-import type { AdminCampaign, CreatorProfile } from '@workspace/api-client-react';
+import type { AdminCampaign, CreatorProfile, CampaignApplicationInput } from '@workspace/api-client-react';
 import { COUNTRY_OPTIONS } from '@/lib/countries';
+import { Form } from '@/components/ui/form';
 
 function messageOf(error: unknown) {
   return error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Something went wrong. Please try again.';
@@ -102,10 +110,10 @@ function StatusForProfile({ profile, campaign }: { profile?: CreatorProfile; cam
     : <div className="space-y-1.5"><p className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8f463d]"><XCircle size={14} /> Not eligible</p><ul className="list-disc space-y-1 pl-4 text-[11px] leading-5 text-[#8f463d]">{result.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul></div>;
 }
 
-function CampaignCard({ campaign, profile }: { campaign: AdminCampaign; profile?: CreatorProfile }) {
+function CampaignCard({ campaign, profile, applied }: { campaign: AdminCampaign; profile?: CreatorProfile; applied: boolean }) {
   return <article data-testid={`card-creator-campaign-${campaign.id}`} className="flex h-full flex-col overflow-hidden rounded-[22px] border border-border/80 bg-card transition duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_16px_40px_-32px_rgba(36,52,43,.42)]">
     <div className="p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="eyebrow text-primary">{campaign.organizerName}</p><h2 data-testid={`text-creator-campaign-title-${campaign.id}`} className="serif mt-2 text-[1.4rem] font-semibold leading-tight tracking-[-.045em]">{campaign.title}</h2></div><span className="shrink-0 rounded-full bg-[#e5ebe1] px-3 py-1.5 text-sm font-semibold text-[#315848]" data-testid={`text-creator-campaign-reward-${campaign.id}`}>{reward(campaign.rewardAmount, campaign.currency)}</span></div>
+       <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="eyebrow text-primary">{campaign.organizerName}</p><h2 data-testid={`text-creator-campaign-title-${campaign.id}`} className="serif mt-2 text-[1.4rem] font-semibold leading-tight tracking-[-.045em]">{campaign.title}</h2></div><div className="flex shrink-0 flex-col items-end gap-2"><span className="rounded-full bg-[#e5ebe1] px-3 py-1.5 text-sm font-semibold text-[#315848]" data-testid={`text-creator-campaign-reward-${campaign.id}`}>{reward(campaign.rewardAmount, campaign.currency)}</span>{applied && <span data-testid={`status-applied-card-${campaign.id}`} className="inline-flex items-center gap-1 rounded-full bg-[#e7efe6] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[.08em] text-[#315848]"><CircleCheck size={12} /> Applied</span>}</div></div>
       <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">{campaign.shortDescription}</p>
       <div className="mt-5 flex flex-wrap gap-2">{campaign.niches.map(niche => <span key={niche} className="rounded-full bg-secondary px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground">{niche}</span>)}</div>
       <div className="mt-5 grid gap-2 border-t border-border pt-4 text-xs text-muted-foreground sm:grid-cols-2">
@@ -128,6 +136,7 @@ export function CampaignDiscovery() {
   const current = useGetCurrentUser({ query: { queryKey: getGetCurrentUserQueryKey(), retry: false } });
   const profileQuery = useGetCreatorProfile({ query: { queryKey: getGetCreatorProfileQueryKey(), enabled: !!current.data && current.data.role === 'CREATOR', retry: false } });
   const campaignsQuery = useListCreatorCampaigns({ query: { queryKey: getListCreatorCampaignsQueryKey(), enabled: !!current.data && current.data.role === 'CREATOR', retry: false } });
+  const applicationsQuery = useListCreatorApplications({ query: { queryKey: getListCreatorApplicationsQueryKey(), enabled: !!current.data && current.data.role === 'CREATOR', retry: false } });
   const [niche, setNiche] = useState('All niches');
   const [platform, setPlatform] = useState('All platforms');
   const [country, setCountry] = useState('All countries');
@@ -135,6 +144,7 @@ export function CampaignDiscovery() {
   const [eligibleOnly, setEligibleOnly] = useState(false);
   const campaigns = campaignsQuery.data?.campaigns ?? [];
   const profile = profileQuery.data;
+  const appliedCampaignIds = useMemo(() => new Set((applicationsQuery.data?.applications ?? []).map(application => application.campaignId)), [applicationsQuery.data?.applications]);
   useEffect(() => { if (current.isError) setLocation('/login'); }, [current.isError, setLocation]);
   const todayUtc = new Date().toISOString().slice(0, 10);
   const published = useMemo(() => campaigns.filter(campaign => campaign.status === 'PUBLISHED' && campaign.deadline >= todayUtc), [campaigns, todayUtc]);
@@ -181,7 +191,7 @@ export function CampaignDiscovery() {
       {campaignsQuery.isLoading ? <LoadingBlock /> : campaignsQuery.isError ? <div className="mt-8 rounded-[22px] border border-[#e3c2bb] bg-card p-6" data-testid="status-campaign-list-error"><p className="text-sm font-semibold text-[#8f463d]">Opportunities couldn’t be loaded.</p><p className="mt-1 text-xs text-muted-foreground">{messageOf(campaignsQuery.error)}</p><button type="button" onClick={() => campaignsQuery.refetch()} data-testid="button-retry-creator-campaigns" className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Try again</button></div>
         : campaigns.length === 0 || published.length === 0 ? <div className="mt-8 rounded-[22px] border border-dashed border-border bg-card/70 px-6 py-14 text-center" data-testid="empty-creator-campaigns"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><Search size={20} /></div><div className="eyebrow mt-5 text-primary">The board is quiet</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">No live campaigns right now.</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">New opportunities will show here when they open.</p></div>
         : !visible.length ? <div className="mt-8 rounded-[22px] border border-dashed border-border bg-card/70 px-6 py-12 text-center" data-testid="empty-filtered-campaigns"><div className="eyebrow text-primary">No matches this time</div><h2 className="serif mt-2 text-xl font-semibold">Try a wider selection.</h2><p className="mt-1 text-sm text-muted-foreground">Adjust the filters to see more opportunities.</p></div>
-        : <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="list-creator-campaigns">{visible.map(campaign => <CampaignCard key={campaign.id} campaign={campaign} profile={profile} />)}</div>}
+         : <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="list-creator-campaigns">{visible.map(campaign => <CampaignCard key={campaign.id} campaign={campaign} profile={profile} applied={appliedCampaignIds.has(campaign.id)} />)}</div>}
     </section>
     <footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">Tech Sponsor Network <span className="px-2">·</span> Creator opportunity board</footer>
   </main>;
@@ -194,6 +204,7 @@ export function CreatorCampaignDetail() {
   const current = useGetCurrentUser({ query: { queryKey: getGetCurrentUserQueryKey(), retry: false } });
   const profileQuery = useGetCreatorProfile({ query: { queryKey: getGetCreatorProfileQueryKey(), enabled: !!current.data && current.data.role === 'CREATOR', retry: false } });
   const campaignQuery = useGetCreatorCampaign(id, { query: { queryKey: getGetCreatorCampaignQueryKey(id), enabled: !!id && !!current.data && current.data.role === 'CREATOR', retry: false } });
+  const applicationsQuery = useListCreatorApplications({ query: { queryKey: getListCreatorApplicationsQueryKey(), enabled: !!current.data && current.data.role === 'CREATOR', retry: false } });
   useEffect(() => { if (current.isError) setLocation('/login'); }, [current.isError, setLocation]);
   if (current.isError) return null;
   if (current.isLoading || !current.data) return <LoadingBlock />;
@@ -202,6 +213,8 @@ export function CreatorCampaignDetail() {
   if (campaignQuery.isError || !campaignQuery.data) return <main className="min-h-[100dvh] bg-background"><CampaignHeader back /><div className="mx-auto max-w-2xl px-5 py-14"><div className="rounded-[22px] border border-[#e3c2bb] bg-card p-6"><div className="eyebrow text-[#8f463d]">Could not open campaign</div><p className="mt-2 text-sm leading-6 text-muted-foreground">{messageOf(campaignQuery.error)}</p><button type="button" onClick={() => campaignQuery.refetch()} data-testid="button-retry-campaign-detail" className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Try again</button></div></div></main>;
   const campaign = campaignQuery.data;
   const profile = profileQuery.data;
+  const applied = (applicationsQuery.data?.applications ?? []).some(application => application.campaignId === campaign.id);
+  const eligible = profile?.approvalStatus === 'APPROVED' && eligibility(campaign, profile).eligible;
   return <main className="min-h-[100dvh] bg-background">
     <CampaignHeader back />
     <section className="mx-auto max-w-[1040px] px-5 py-8 sm:px-9 sm:py-12">
@@ -224,7 +237,8 @@ export function CreatorCampaignDetail() {
             <PaymentRule campaign={campaign} />
           </div>
           <aside className="space-y-4 lg:sticky lg:top-6">
-            <section className="rounded-[22px] border border-border/80 bg-card p-5 sm:p-6" data-testid={`panel-campaign-eligibility-${campaign.id}`}><div className="eyebrow text-primary">Profile fit</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">Your eligibility</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">Based on the creator profile currently on file.</p><div className="mt-5"><EligibilityPanel campaign={campaign} profile={profile} /></div></section>
+             <section className="rounded-[22px] border border-border/80 bg-card p-5 sm:p-6" data-testid={`panel-campaign-eligibility-${campaign.id}`}><div className="eyebrow text-primary">Profile fit</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">Your eligibility</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">Based on the creator profile currently on file.</p><div className="mt-5"><EligibilityPanel campaign={campaign} profile={profile} /></div></section>
+             {applicationsQuery.isLoading ? <div data-testid={`loading-campaign-application-${campaign.id}`} className="h-24 animate-pulse rounded-[22px] bg-muted" /> : applied ? <div data-testid={`status-applied-detail-${campaign.id}`} className="flex items-start gap-3 rounded-[22px] border border-[#bed1c1] bg-[#e7efe6] p-5 text-[#315848]"><CircleCheck size={20} className="mt-0.5 shrink-0" /><div><p className="text-sm font-semibold">Applied</p><p className="mt-1 text-xs leading-5">Application submitted. Your application for {campaign.title} is now under review. We will email you when there is an update.</p></div></div> : applicationsQuery.isError ? <div role="alert" data-testid={`status-campaign-application-check-error-${campaign.id}`} className="rounded-[22px] border border-[#e3c2bb] bg-card p-4 text-xs leading-5 text-[#8f463d]"><p>We couldn’t confirm your application status.</p><button type="button" onClick={() => applicationsQuery.refetch()} data-testid={`button-retry-application-status-${campaign.id}`} className="mt-2 font-semibold underline underline-offset-2">Check again</button></div> : eligible && <ApplicationForm campaignId={campaign.id} campaignTitle={campaign.title} />}
             <section className="rounded-[22px] border border-border/80 bg-card p-5 sm:p-6"><div className="eyebrow text-muted-foreground">Niches</div><div className="mt-3 flex flex-wrap gap-2">{campaign.niches.map(item => <span key={item} className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground">{item}</span>)}</div><div className="mt-5 border-t border-border pt-4"><p className="eyebrow text-muted-foreground">Audience requirement</p><p className="mt-1 text-sm font-semibold">{new Intl.NumberFormat('en').format(campaign.minimumFollowers)} followers minimum</p><p className="mt-1 text-xs leading-5 text-muted-foreground">On at least one linked {campaign.acceptedPlatforms.join(' or ')} profile.</p></div></section>
           </aside>
         </div>
@@ -233,6 +247,60 @@ export function CreatorCampaignDetail() {
     </section>
     <footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">Tech Sponsor Network <span className="px-2">·</span> Campaign details</footer>
   </main>;
+}
+
+const applicationSchema = z.object({
+  personalMessage: z.string().trim().min(20, 'Please write at least 20 characters.').max(1000, 'Please keep your message to 1,000 characters or fewer.'),
+  paymentRuleAcknowledged: z.boolean().refine(value => value, 'Please acknowledge the payment rule to continue.'),
+});
+type ApplicationFormValues = z.infer<typeof applicationSchema>;
+
+function ApplicationForm({ campaignId, campaignTitle }: { campaignId: string; campaignTitle: string }) {
+  const queryClient = useQueryClient();
+  const apply = useCreateCreatorCampaignApplication();
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const form = useForm<ApplicationFormValues>({
+    resolver: zodResolver(applicationSchema),
+    defaultValues: { personalMessage: '', paymentRuleAcknowledged: false },
+    mode: 'onSubmit',
+  });
+  const onSubmit = form.handleSubmit(values => {
+    setError('');
+    const data: CampaignApplicationInput = values;
+    apply.mutate({ campaignId, data }, {
+      onSuccess: () => {
+        setSuccess(`Application submitted. Your application for ${campaignTitle} is now under review. We will email you when there is an update.`);
+        void queryClient.invalidateQueries({ queryKey: getListCreatorApplicationsQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getListCreatorCampaignsQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetCreatorCampaignQueryKey(campaignId) });
+      },
+      onError: mutationError => setError(messageOf(mutationError)),
+    });
+  });
+  if (success) return <div role="status" data-testid="status-application-submitted" className="rounded-[22px] border border-[#bed1c1] bg-[#e7efe6] p-5 text-sm leading-6 text-[#315848]">{success}</div>;
+  return <section className="rounded-[22px] border border-border/80 bg-card p-5 sm:p-6" data-testid="panel-apply-campaign">
+    <div className="eyebrow text-primary">Take the next step</div>
+    <h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">Apply to this campaign</h2>
+    <p className="mt-2 text-xs leading-5 text-muted-foreground">Tell the brand why this partnership fits your work.</p>
+    <Form {...form}>
+      <form noValidate onSubmit={onSubmit} className="mt-5 space-y-4">
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold">Personal message</span>
+          <textarea data-testid="input-application-message" className="field min-h-32 resize-y" maxLength={1000} placeholder="Introduce your perspective and how you would approach the brief." aria-invalid={!!form.formState.errors.personalMessage} {...form.register('personalMessage')} />
+          <span className="mt-1 block text-right text-[11px] text-muted-foreground">{form.watch('personalMessage').length}/1000</span>
+          {form.formState.errors.personalMessage && <span role="alert" className="mt-1 block text-xs text-destructive">{form.formState.errors.personalMessage.message}</span>}
+        </label>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-background p-3.5 text-xs leading-5">
+          <input data-testid="checkbox-payment-rule-acknowledged" type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]" {...form.register('paymentRuleAcknowledged')} />
+          <span>I have read the payment rule: payment is made only if my submission is accepted.</span>
+        </label>
+        {form.formState.errors.paymentRuleAcknowledged && <p role="alert" className="-mt-2 text-xs text-destructive">{form.formState.errors.paymentRuleAcknowledged.message}</p>}
+        {error && <div role="alert" data-testid="status-application-error" className="rounded-xl border border-[#e3c2bb] bg-[#f7e9e6] p-3 text-xs leading-5 text-[#8f463d]">{error}</div>}
+        <button type="submit" disabled={apply.isPending} data-testid="button-submit-application" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:brightness-95 disabled:cursor-wait disabled:opacity-60"><Send size={15} />{apply.isPending ? 'Submitting…' : 'Submit application'}</button>
+      </form>
+    </Form>
+  </section>;
 }
 
 function DetailMetric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {

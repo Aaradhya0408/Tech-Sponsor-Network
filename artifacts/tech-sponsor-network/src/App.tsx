@@ -23,6 +23,7 @@ import {
 import type { AuthUser, CreatorProfileInput, CreatorPlatform, CreatorNiche, CreatorProfile, AdminCreatorProfile, AdminCreatorProfiles } from '@workspace/api-client-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import AdminCampaigns from '@/components/admin-campaigns';
+import { AdminApplicationsPage, CreatorApplicationsPage } from '@/components/applications';
 import { CampaignDiscovery, CreatorCampaignDetail } from '@/components/creator-campaigns';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -289,8 +290,8 @@ function DevelopmentVerificationLink({ url }: { url: string }) {
 
 function DashboardShell({ user, admin = false, onLogout, children }: { user: AuthUser; admin?: boolean; onLogout: () => void; children: ReactNode }) {
   return <main className="min-h-[100dvh] bg-background">
-    <header className="flex min-h-[76px] items-center justify-between border-b border-border/80 px-5 sm:px-9 lg:px-[7vw]">
-      <Brand /><div className="flex items-center gap-2 sm:gap-5">{admin ? <Link href="/admin/campaigns" data-testid="link-admin-campaigns" className="rounded-full border border-primary/30 px-3.5 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 sm:px-4">Campaigns</Link> : <Link href="/campaigns" data-testid="link-creator-campaigns" className="rounded-full border border-primary/30 px-3.5 py-2 text-xs font-semibold text-primary transition hover:bg-primary/5 sm:px-4">Discover campaigns</Link>}<span className="hidden text-xs text-muted-foreground sm:block">{admin ? 'Network administration' : 'Creator member'}</span><button onClick={onLogout} data-testid="button-logout" className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-2 text-xs font-semibold transition hover:bg-muted"><LogOut size={14} /> Sign out</button></div>
+    <header className="flex min-h-[76px] flex-wrap items-center justify-between gap-3 border-b border-border/80 px-5 py-3 sm:px-9 lg:px-[7vw]">
+      <Brand /><div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">{admin ? <><Link href="/admin/campaigns" data-testid="link-admin-campaigns" className="rounded-full border border-primary/30 px-3 py-2 text-[11px] font-semibold text-primary transition hover:bg-primary/5 sm:px-4 sm:text-xs">Campaigns</Link><Link href="/admin/applications" data-testid="link-admin-applications" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">Applications</Link></> : <><Link href="/campaigns" data-testid="link-creator-campaigns" className="rounded-full border border-primary/30 px-3 py-2 text-[11px] font-semibold text-primary transition hover:bg-primary/5 sm:px-4 sm:text-xs">Discover campaigns</Link><Link href="/my-campaigns" data-testid="link-creator-applications" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">My applications</Link></>}<span className="hidden text-xs text-muted-foreground md:block">{admin ? 'Network administration' : 'Creator member'}</span><button onClick={onLogout} data-testid="button-logout" className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-[11px] font-semibold transition hover:bg-muted sm:px-3.5 sm:text-xs"><LogOut size={14} /> <span className="hidden sm:inline">Sign out</span></button></div>
     </header>
     <section className="mx-auto max-w-[1120px] px-5 py-10 sm:px-9 sm:py-14">
       <div className="page-enter">
@@ -651,6 +652,8 @@ function Router() {
         <Route path="/campaigns" component={CampaignDiscovery} />
         <Route path="/campaigns/:campaignId" component={CreatorCampaignDetail} />
         <Route path="/admin/campaigns" component={AdminCampaigns} />
+        <Route path="/my-campaigns" component={CreatorApplicationsPage} />
+        <Route path="/admin/applications" component={AdminApplicationsPage} />
         <Route component={NotFound} />
       </Switch>
     </ErrorBoundary>

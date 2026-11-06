@@ -39,6 +39,8 @@ function creatorApplicationResponse(
     id: application.id,
     campaignId: application.campaignId,
     campaignTitle,
+    personalMessage: application.personalMessage,
+    paymentRuleAcknowledged: application.paymentRuleAcknowledged,
     status: application.status,
     appliedAt: application.createdAt.toISOString(),
   };
