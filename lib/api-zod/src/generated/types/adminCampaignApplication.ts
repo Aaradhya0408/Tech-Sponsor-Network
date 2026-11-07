@@ -5,15 +5,31 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminCampaignApplicationDecision } from './adminCampaignApplicationDecision';
+import type { AdminCampaignApplicationRejectionReason } from './adminCampaignApplicationRejectionReason';
 import type { CampaignApplicationStatus } from './campaignApplicationStatus';
+import type { CreatorNiche } from './creatorNiche';
+import type { CreatorPlatformProfile } from './creatorPlatformProfile';
 
 export interface AdminCampaignApplication {
   id: string;
   campaignId: string;
   campaignTitle: string;
   creatorName: string;
+  creatorCountry: string;
+  creatorNiche: CreatorNiche;
+  platforms: CreatorPlatformProfile[];
   personalMessage: string;
   paymentRuleAcknowledged: boolean;
+  /** @nullable */
+  rejectionReason: AdminCampaignApplicationRejectionReason;
+  /** @nullable */
+  decisionNote: string | null;
+  /** @nullable */
+  decidedByName: string | null;
+  /** @nullable */
+  decidedAt: Date | null;
+  decisionHistory: AdminCampaignApplicationDecision[];
   status: CampaignApplicationStatus;
   appliedAt: Date;
 }

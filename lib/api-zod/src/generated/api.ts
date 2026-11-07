@@ -402,6 +402,8 @@ export const ListCreatorApplicationsResponse = zod.object({
   "campaignTitle": zod.string(),
   "personalMessage": zod.string(),
   "paymentRuleAcknowledged": zod.boolean(),
+  "rejectionReason": zod.union([zod.literal('FOLLOWERS_BELOW_REQUIREMENT'),zod.literal('NICHE_NOT_A_FIT'),zod.literal('PROFILE_INCOMPLETE'),zod.literal('APPLICATION_MESSAGE_TOO_WEAK'),zod.literal('TOO_MANY_APPLICANTS'),zod.literal('OTHER'),zod.literal(null)]).nullable(),
+  "decisionNote": zod.string().nullable(),
   "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
   "appliedAt": zod.coerce.date()
 }))
@@ -432,26 +434,85 @@ export const CreateCreatorCampaignApplicationResponse = zod.object({
   "campaignTitle": zod.string(),
   "personalMessage": zod.string(),
   "paymentRuleAcknowledged": zod.boolean(),
+  "rejectionReason": zod.union([zod.literal('FOLLOWERS_BELOW_REQUIREMENT'),zod.literal('NICHE_NOT_A_FIT'),zod.literal('PROFILE_INCOMPLETE'),zod.literal('APPLICATION_MESSAGE_TOO_WEAK'),zod.literal('TOO_MANY_APPLICANTS'),zod.literal('OTHER'),zod.literal(null)]).nullable(),
+  "decisionNote": zod.string().nullable(),
   "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
   "appliedAt": zod.coerce.date()
 })
 
 
 /**
- * Read-only application records grouped by campaign in the admin interface.
+ * Application records, creator profile details, and decision history for administrators.
  * @summary List campaign applications for administrators
  */
+export const listAdminCampaignApplicationsResponseApplicationsItemPlatformsItemFollowersMin = 0;
+
+
+
 export const ListAdminCampaignApplicationsResponse = zod.object({
   "applications": zod.array(zod.object({
   "id": zod.string().uuid(),
   "campaignId": zod.string().uuid(),
   "campaignTitle": zod.string(),
   "creatorName": zod.string(),
+  "creatorCountry": zod.string(),
+  "creatorNiche": zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other']),
+  "platforms": zod.array(zod.object({
+  "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
+  "url": zod.string().url(),
+  "followers": zod.number().int().min(listAdminCampaignApplicationsResponseApplicationsItemPlatformsItemFollowersMin),
+  "verified": zod.boolean()
+})),
   "personalMessage": zod.string(),
   "paymentRuleAcknowledged": zod.boolean(),
+  "rejectionReason": zod.union([zod.literal('FOLLOWERS_BELOW_REQUIREMENT'),zod.literal('NICHE_NOT_A_FIT'),zod.literal('PROFILE_INCOMPLETE'),zod.literal('APPLICATION_MESSAGE_TOO_WEAK'),zod.literal('TOO_MANY_APPLICANTS'),zod.literal('OTHER'),zod.literal(null)]).nullable(),
+  "decisionNote": zod.string().nullable(),
+  "decidedByName": zod.string().nullable(),
+  "decidedAt": zod.coerce.date().nullable(),
+  "decisionHistory": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "previousStatus": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
+  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
+  "rejectionReason": zod.union([zod.literal('FOLLOWERS_BELOW_REQUIREMENT'),zod.literal('NICHE_NOT_A_FIT'),zod.literal('PROFILE_INCOMPLETE'),zod.literal('APPLICATION_MESSAGE_TOO_WEAK'),zod.literal('TOO_MANY_APPLICANTS'),zod.literal('OTHER'),zod.literal(null)]).nullable(),
+  "note": zod.string().nullable(),
+  "changeReason": zod.string().nullable(),
+  "decidedByName": zod.string(),
+  "decidedAt": zod.coerce.date()
+})),
   "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
   "appliedAt": zod.coerce.date()
 }))
+})
+
+
+/**
+ * Decisions are recorded with their actor and timestamp. Later decision changes require a reason and are appended to history.
+ * @summary Accept, reject, or promote a campaign application
+ */
+export const UpdateAdminCampaignApplicationDecisionParams = zod.object({
+  "applicationId": zod.coerce.string().uuid()
+})
+
+export const updateAdminCampaignApplicationDecisionBodyNoteMax = 500;
+
+export const updateAdminCampaignApplicationDecisionBodyChangeReasonMax = 500;
+
+
+
+export const UpdateAdminCampaignApplicationDecisionBody = zod.object({
+  "status": zod.enum(['ACCEPTED', 'NOT_SELECTED', 'WINNER']),
+  "rejectionReason": zod.enum(['FOLLOWERS_BELOW_REQUIREMENT', 'NICHE_NOT_A_FIT', 'PROFILE_INCOMPLETE', 'APPLICATION_MESSAGE_TOO_WEAK', 'TOO_MANY_APPLICANTS', 'OTHER']).optional(),
+  "note": zod.string().max(updateAdminCampaignApplicationDecisionBodyNoteMax).optional().describe('Optional decision note; required when the rejection reason is Other'),
+  "changeReason": zod.string().min(1).max(updateAdminCampaignApplicationDecisionBodyChangeReasonMax).optional().describe('Required when changing an application that already has a decision')
+})
+
+export const UpdateAdminCampaignApplicationDecisionResponse = zod.object({
+  "id": zod.string().uuid(),
+  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
+  "rejectionReason": zod.union([zod.literal('FOLLOWERS_BELOW_REQUIREMENT'),zod.literal('NICHE_NOT_A_FIT'),zod.literal('PROFILE_INCOMPLETE'),zod.literal('APPLICATION_MESSAGE_TOO_WEAK'),zod.literal('TOO_MANY_APPLICANTS'),zod.literal('OTHER'),zod.literal(null)]).nullable(),
+  "note": zod.string().nullable(),
+  "decidedByName": zod.string(),
+  "decidedAt": zod.coerce.date()
 })
 
 

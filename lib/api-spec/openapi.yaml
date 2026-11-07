@@ -589,7 +589,7 @@ paths:
       operationId: listAdminCampaignApplications
       tags: [admin-applications]
       summary: List campaign applications for administrators
-      description: Read-only application records grouped by campaign in the admin interface.
+      description: Application records, creator profile details, and decision history for administrators.
       security:
         - SessionCookie: []
       responses:
@@ -607,6 +607,64 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/applications/{applicationId}/decision:
+    patch:
+      operationId: updateAdminCampaignApplicationDecision
+      tags: [admin-applications]
+      summary: Accept, reject, or promote a campaign application
+      description: Decisions are recorded with their actor and timestamp. Later decision changes require a reason and are appended to history.
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignApplicationDecisionInput"
+      responses:
+        "200":
+          description: Application decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignApplicationDecisionResult"
+        "400":
+          description: Decision data is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Application not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Application status cannot be changed from its current state
           content:
             application/json:
               schema:
@@ -1213,6 +1271,15 @@ components:
     CampaignApplicationStatus:
       type: string
       enum: [UNDER_REVIEW, ACCEPTED, NOT_SELECTED, WINNER, PAID]
+    CampaignApplicationRejectionReason:
+      type: string
+      enum:
+        - FOLLOWERS_BELOW_REQUIREMENT
+        - NICHE_NOT_A_FIT
+        - PROFILE_INCOMPLETE
+        - APPLICATION_MESSAGE_TOO_WEAK
+        - TOO_MANY_APPLICANTS
+        - OTHER
     CampaignApplicationInput:
       type: object
       additionalProperties: false
@@ -1225,6 +1292,81 @@ components:
           type: boolean
           description: Must be true to record agreement to the fixed payment rule
       required: [personalMessage, paymentRuleAcknowledged]
+    CampaignApplicationDecisionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [ACCEPTED, NOT_SELECTED, WINNER]
+        rejectionReason:
+          $ref: "#/components/schemas/CampaignApplicationRejectionReason"
+        note:
+          type: string
+          maxLength: 500
+          description: Optional decision note; required when the rejection reason is Other
+        changeReason:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Required when changing an application that already has a decision
+      required: [status]
+    CampaignApplicationDecisionResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/CampaignApplicationStatus"
+        rejectionReason:
+          type: ["string", "null"]
+          enum:
+            - FOLLOWERS_BELOW_REQUIREMENT
+            - NICHE_NOT_A_FIT
+            - PROFILE_INCOMPLETE
+            - APPLICATION_MESSAGE_TOO_WEAK
+            - TOO_MANY_APPLICANTS
+            - OTHER
+            - null
+        note:
+          type: ["string", "null"]
+        decidedByName:
+          type: string
+        decidedAt:
+          type: string
+          format: date-time
+      required: [id, status, rejectionReason, note, decidedByName, decidedAt]
+    AdminCampaignApplicationDecision:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        previousStatus:
+          $ref: "#/components/schemas/CampaignApplicationStatus"
+        status:
+          $ref: "#/components/schemas/CampaignApplicationStatus"
+        rejectionReason:
+          type: ["string", "null"]
+          enum:
+            - FOLLOWERS_BELOW_REQUIREMENT
+            - NICHE_NOT_A_FIT
+            - PROFILE_INCOMPLETE
+            - APPLICATION_MESSAGE_TOO_WEAK
+            - TOO_MANY_APPLICANTS
+            - OTHER
+            - null
+        note:
+          type: ["string", "null"]
+        changeReason:
+          type: ["string", "null"]
+        decidedByName:
+          type: string
+        decidedAt:
+          type: string
+          format: date-time
+      required: [id, previousStatus, status, rejectionReason, note, changeReason, decidedByName, decidedAt]
     CreatorCampaignApplication:
       type: object
       properties:
@@ -1240,6 +1382,18 @@ components:
           type: string
         paymentRuleAcknowledged:
           type: boolean
+        rejectionReason:
+          type: ["string", "null"]
+          enum:
+            - FOLLOWERS_BELOW_REQUIREMENT
+            - NICHE_NOT_A_FIT
+            - PROFILE_INCOMPLETE
+            - APPLICATION_MESSAGE_TOO_WEAK
+            - TOO_MANY_APPLICANTS
+            - OTHER
+            - null
+        decisionNote:
+          type: ["string", "null"]
         status:
           $ref: "#/components/schemas/CampaignApplicationStatus"
         appliedAt:
@@ -1251,6 +1405,8 @@ components:
         - campaignTitle
         - personalMessage
         - paymentRuleAcknowledged
+        - rejectionReason
+        - decisionNote
         - status
         - appliedAt
     CreatorCampaignApplicationList:
@@ -1274,10 +1430,39 @@ components:
           type: string
         creatorName:
           type: string
+        creatorCountry:
+          type: string
+        creatorNiche:
+          $ref: "#/components/schemas/CreatorNiche"
+        platforms:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreatorPlatformProfile"
         personalMessage:
           type: string
         paymentRuleAcknowledged:
           type: boolean
+        rejectionReason:
+          type: ["string", "null"]
+          enum:
+            - FOLLOWERS_BELOW_REQUIREMENT
+            - NICHE_NOT_A_FIT
+            - PROFILE_INCOMPLETE
+            - APPLICATION_MESSAGE_TOO_WEAK
+            - TOO_MANY_APPLICANTS
+            - OTHER
+            - null
+        decisionNote:
+          type: ["string", "null"]
+        decidedByName:
+          type: ["string", "null"]
+        decidedAt:
+          type: ["string", "null"]
+          format: date-time
+        decisionHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCampaignApplicationDecision"
         status:
           $ref: "#/components/schemas/CampaignApplicationStatus"
         appliedAt:
@@ -1288,8 +1473,16 @@ components:
         - campaignId
         - campaignTitle
         - creatorName
+        - creatorCountry
+        - creatorNiche
+        - platforms
         - personalMessage
         - paymentRuleAcknowledged
+        - rejectionReason
+        - decisionNote
+        - decidedByName
+        - decidedAt
+        - decisionHistory
         - status
         - appliedAt
     AdminCampaignApplicationList:

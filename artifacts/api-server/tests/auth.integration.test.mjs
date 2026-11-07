@@ -898,6 +898,16 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     );
     assert.equal(adminCannotListCreatorApplications.response.status, 403);
 
+    const verifyApplicationPlatform = await request(
+      `/admin/creator-profiles/${creatorRecord.userId}/platforms/YouTube/verification`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { verified: true },
+      },
+    );
+    assert.equal(verifyApplicationPlatform.response.status, 200);
+
     const adminApplications = await request("/admin/applications", {
       cookie: adminLogin.cookie,
     });
@@ -910,11 +920,173 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     assert.equal(adminApplication?.personalMessage, validApplicationMessage);
     assert.equal(adminApplication?.paymentRuleAcknowledged, true);
     assert.equal(adminApplication?.status, "UNDER_REVIEW");
+    assert.equal(adminApplication?.creatorCountry, "IN");
+    assert.equal(adminApplication?.creatorNiche, "AI");
+    assert.deepEqual(adminApplication?.platforms, [
+      {
+        platform: "YouTube",
+        url: "https://youtube.com/@auth-test-creator-updated",
+        followers: 5000,
+        verified: true,
+      },
+    ]);
+    assert.deepEqual(adminApplication?.decisionHistory, []);
     const creatorCannotListAdminApplications = await request(
       "/admin/applications",
       { cookie: creatorLogin.cookie },
     );
     assert.equal(creatorCannotListAdminApplications.response.status, 403);
+    const creatorCannotDecideApplications = await request(
+      `/admin/applications/${applicationId}/decision`,
+      {
+        method: "PATCH",
+        cookie: creatorLogin.cookie,
+        body: { status: "ACCEPTED" },
+      },
+    );
+    assert.equal(creatorCannotDecideApplications.response.status, 403);
+
+    const rejectionWithoutReason = await request(
+      `/admin/applications/${applicationId}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "NOT_SELECTED" },
+      },
+    );
+    assert.equal(rejectionWithoutReason.response.status, 400);
+    const otherRejectionWithoutNote = await request(
+      `/admin/applications/${applicationId}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: {
+          status: "NOT_SELECTED",
+          rejectionReason: "OTHER",
+        },
+      },
+    );
+    assert.equal(otherRejectionWithoutNote.response.status, 400);
+
+    const rejection = await request(
+      `/admin/applications/${applicationId}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: {
+          status: "NOT_SELECTED",
+          rejectionReason: "APPLICATION_MESSAGE_TOO_WEAK",
+          note: "Please give a more specific example of your planned content.",
+        },
+      },
+    );
+    assert.equal(rejection.response.status, 200);
+    assert.equal(rejection.body.status, "NOT_SELECTED");
+    assert.equal(rejection.body.rejectionReason, "APPLICATION_MESSAGE_TOO_WEAK");
+
+    const creatorSeesRejectedApplication = await request("/creator/applications", {
+      cookie: creatorLogin.cookie,
+    });
+    const rejectedApplication = creatorSeesRejectedApplication.body.applications.find(
+      (item) => item.id === applicationId,
+    );
+    assert.equal(rejectedApplication?.status, "NOT_SELECTED");
+    assert.equal(
+      rejectedApplication?.rejectionReason,
+      "APPLICATION_MESSAGE_TOO_WEAK",
+    );
+    assert.equal(
+      rejectedApplication?.decisionNote,
+      "Please give a more specific example of your planned content.",
+    );
+
+    const winnerFromRejected = await request(
+      `/admin/applications/${applicationId}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: {
+          status: "WINNER",
+          changeReason: "This should not be permitted.",
+        },
+      },
+    );
+    assert.equal(winnerFromRejected.response.status, 409);
+    const changeWithoutReason = await request(
+      `/admin/applications/${applicationId}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "ACCEPTED" },
+      },
+    );
+    assert.equal(changeWithoutReason.response.status, 400);
+
+    const correctedDecision = await request(
+      `/admin/applications/${applicationId}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: {
+          status: "ACCEPTED",
+          note: "The creator has now clarified their proposed content.",
+          changeReason: "Reviewed new information from the creator.",
+        },
+      },
+    );
+    assert.equal(correctedDecision.response.status, 200);
+    assert.equal(correctedDecision.body.status, "ACCEPTED");
+
+    const winnerWithoutReason = await request(
+      `/admin/applications/${applicationId}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "WINNER" },
+      },
+    );
+    assert.equal(winnerWithoutReason.response.status, 400);
+    const winner = await request(
+      `/admin/applications/${applicationId}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: {
+          status: "WINNER",
+          changeReason: "Selected as the campaign winner after review.",
+        },
+      },
+    );
+    assert.equal(winner.response.status, 200);
+    assert.equal(winner.body.status, "WINNER");
+
+    const updatedAdminApplications = await request("/admin/applications", {
+      cookie: adminLogin.cookie,
+    });
+    const updatedAdminApplication =
+      updatedAdminApplications.body.applications.find(
+        (item) => item.id === applicationId,
+      );
+    assert.equal(updatedAdminApplication?.status, "WINNER");
+    assert.equal(updatedAdminApplication?.decisionHistory.length, 3);
+    assert.equal(
+      updatedAdminApplication?.decisionHistory[0].decidedByName,
+      "Auth Test",
+    );
+    assert.equal(
+      updatedAdminApplication?.decisionHistory[1].changeReason,
+      "Reviewed new information from the creator.",
+    );
+    assert.ok(updatedAdminApplication?.decisionHistory[2].decidedAt);
+
+    const creatorSeesWinner = await request("/creator/applications", {
+      cookie: creatorLogin.cookie,
+    });
+    assert.equal(
+      creatorSeesWinner.body.applications.find((item) => item.id === applicationId)
+        ?.status,
+      "WINNER",
+    );
     const expiredCampaignApply = await request(
       `/creator/campaigns/${expiredCampaignId}/applications`,
       {

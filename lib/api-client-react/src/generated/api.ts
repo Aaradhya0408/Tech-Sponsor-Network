@@ -26,6 +26,8 @@ import type {
   AdminCreatorProfiles,
   AuthMessage,
   AuthUser,
+  CampaignApplicationDecisionInput,
+  CampaignApplicationDecisionResult,
   CampaignApplicationInput,
   CampaignInput,
   CampaignStatusInput,
@@ -1559,7 +1561,7 @@ export const getListAdminCampaignApplicationsUrl = () => {
 }
 
 /**
- * Read-only application records grouped by campaign in the admin interface.
+ * Application records, creator profile details, and decision history for administrators.
  * @summary List campaign applications for administrators
  */
 export const listAdminCampaignApplications = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignApplicationList> => {
@@ -1627,6 +1629,96 @@ export function useListAdminCampaignApplications<TData = Awaited<ReturnType<type
 
 
 
+
+export const getUpdateAdminCampaignApplicationDecisionUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/admin/applications/${applicationId}/decision`
+}
+
+/**
+ * Decisions are recorded with their actor and timestamp. Later decision changes require a reason and are appended to history.
+ * @summary Accept, reject, or promote a campaign application
+ */
+export const updateAdminCampaignApplicationDecision = async (applicationId: string,
+    campaignApplicationDecisionInput: CampaignApplicationDecisionInput, options?: Parameters<typeof customFetch>[1]): Promise<CampaignApplicationDecisionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CampaignApplicationDecisionResult>(getUpdateAdminCampaignApplicationDecisionUrl(applicationId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(campaignApplicationDecisionInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminCampaignApplicationDecisionMutationKey = () => ['updateAdminCampaignApplicationDecision'] as const;
+
+export const getUpdateAdminCampaignApplicationDecisionMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaignApplicationDecision>>, TError,UpdateAdminCampaignApplicationDecisionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaignApplicationDecision>>, TError,UpdateAdminCampaignApplicationDecisionMutationVariables, TContext> => {
+
+const mutationKey = getUpdateAdminCampaignApplicationDecisionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminCampaignApplicationDecision>>, UpdateAdminCampaignApplicationDecisionMutationVariables> = (props) => {
+          const {applicationId,data} = props ?? {};
+
+          return  updateAdminCampaignApplicationDecision(applicationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminCampaignApplicationDecisionMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminCampaignApplicationDecision>>>
+    export type UpdateAdminCampaignApplicationDecisionMutationBody = BodyType<CampaignApplicationDecisionInput>
+    export type UpdateAdminCampaignApplicationDecisionMutationError = ErrorType<ErrorResponse>
+    export type UpdateAdminCampaignApplicationDecisionMutationVariables = {applicationId: string;data: BodyType<CampaignApplicationDecisionInput>}
+
+    /**
+ * @summary Accept, reject, or promote a campaign application
+ */
+export const useUpdateAdminCampaignApplicationDecision = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaignApplicationDecision>>, TError,UpdateAdminCampaignApplicationDecisionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminCampaignApplicationDecision>>,
+        TError,
+        UpdateAdminCampaignApplicationDecisionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateAdminCampaignApplicationDecisionMutationOptions(options));
+    }
 
 export const getListAdminCampaignsUrl = () => {
 

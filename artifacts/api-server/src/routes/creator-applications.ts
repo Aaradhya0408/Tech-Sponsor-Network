@@ -41,6 +41,8 @@ function creatorApplicationResponse(
     campaignTitle,
     personalMessage: application.personalMessage,
     paymentRuleAcknowledged: application.paymentRuleAcknowledged,
+    rejectionReason: application.decisionReason,
+    decisionNote: application.decisionNote,
     status: application.status,
     appliedAt: application.createdAt.toISOString(),
   };
@@ -157,6 +159,10 @@ router.post(
         personalMessage,
         paymentRuleAcknowledged: true,
         status: "UNDER_REVIEW",
+        decisionReason: null,
+        decisionNote: null,
+        decidedBy: null,
+        decidedAt: null,
       })
       .onConflictDoNothing({
         target: [

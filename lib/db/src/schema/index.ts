@@ -21,3 +21,4 @@ export * from "./auth";
 export * from "./creator-profiles";
 export * from "./campaigns";
 export * from "./campaign-applications";
+export * from "./campaign-application-decisions";

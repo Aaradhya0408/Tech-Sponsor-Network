@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CampaignApplicationStatus } from './campaignApplicationStatus';
+import type { CreatorCampaignApplicationRejectionReason } from './creatorCampaignApplicationRejectionReason';
 
 export interface CreatorCampaignApplication {
   id: string;
@@ -13,6 +14,10 @@ export interface CreatorCampaignApplication {
   campaignTitle: string;
   personalMessage: string;
   paymentRuleAcknowledged: boolean;
+  /** @nullable */
+  rejectionReason: CreatorCampaignApplicationRejectionReason;
+  /** @nullable */
+  decisionNote: string | null;
   status: CampaignApplicationStatus;
   appliedAt: Date;
 }

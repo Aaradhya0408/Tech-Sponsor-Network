@@ -329,6 +329,18 @@ export const CampaignApplicationStatus = {
   PAID: 'PAID',
 } as const;
 
+export type CampaignApplicationRejectionReason = typeof CampaignApplicationRejectionReason[keyof typeof CampaignApplicationRejectionReason];
+
+
+export const CampaignApplicationRejectionReason = {
+  FOLLOWERS_BELOW_REQUIREMENT: 'FOLLOWERS_BELOW_REQUIREMENT',
+  NICHE_NOT_A_FIT: 'NICHE_NOT_A_FIT',
+  PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
+  APPLICATION_MESSAGE_TOO_WEAK: 'APPLICATION_MESSAGE_TOO_WEAK',
+  TOO_MANY_APPLICANTS: 'TOO_MANY_APPLICANTS',
+  OTHER: 'OTHER',
+} as const;
+
 export interface CampaignApplicationInput {
   /**
      * @minLength 20
@@ -339,12 +351,111 @@ export interface CampaignApplicationInput {
   paymentRuleAcknowledged: boolean;
 }
 
+export type CampaignApplicationDecisionInputStatus = typeof CampaignApplicationDecisionInputStatus[keyof typeof CampaignApplicationDecisionInputStatus];
+
+
+export const CampaignApplicationDecisionInputStatus = {
+  ACCEPTED: 'ACCEPTED',
+  NOT_SELECTED: 'NOT_SELECTED',
+  WINNER: 'WINNER',
+} as const;
+
+export interface CampaignApplicationDecisionInput {
+  status: CampaignApplicationDecisionInputStatus;
+  rejectionReason?: CampaignApplicationRejectionReason;
+  /**
+     * Optional decision note; required when the rejection reason is Other
+     * @maxLength 500
+     */
+  note?: string;
+  /**
+     * Required when changing an application that already has a decision
+     * @minLength 1
+     * @maxLength 500
+     */
+  changeReason?: string;
+}
+
+/**
+ * @nullable
+ */
+export type CampaignApplicationDecisionResultRejectionReason = typeof CampaignApplicationDecisionResultRejectionReason[keyof typeof CampaignApplicationDecisionResultRejectionReason] | null;
+
+
+export const CampaignApplicationDecisionResultRejectionReason = {
+  FOLLOWERS_BELOW_REQUIREMENT: 'FOLLOWERS_BELOW_REQUIREMENT',
+  NICHE_NOT_A_FIT: 'NICHE_NOT_A_FIT',
+  PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
+  APPLICATION_MESSAGE_TOO_WEAK: 'APPLICATION_MESSAGE_TOO_WEAK',
+  TOO_MANY_APPLICANTS: 'TOO_MANY_APPLICANTS',
+  OTHER: 'OTHER',
+} as const;
+
+export interface CampaignApplicationDecisionResult {
+  id: string;
+  status: CampaignApplicationStatus;
+  /** @nullable */
+  rejectionReason: CampaignApplicationDecisionResultRejectionReason;
+  /** @nullable */
+  note: string | null;
+  decidedByName: string;
+  decidedAt: string;
+}
+
+/**
+ * @nullable
+ */
+export type AdminCampaignApplicationDecisionRejectionReason = typeof AdminCampaignApplicationDecisionRejectionReason[keyof typeof AdminCampaignApplicationDecisionRejectionReason] | null;
+
+
+export const AdminCampaignApplicationDecisionRejectionReason = {
+  FOLLOWERS_BELOW_REQUIREMENT: 'FOLLOWERS_BELOW_REQUIREMENT',
+  NICHE_NOT_A_FIT: 'NICHE_NOT_A_FIT',
+  PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
+  APPLICATION_MESSAGE_TOO_WEAK: 'APPLICATION_MESSAGE_TOO_WEAK',
+  TOO_MANY_APPLICANTS: 'TOO_MANY_APPLICANTS',
+  OTHER: 'OTHER',
+} as const;
+
+export interface AdminCampaignApplicationDecision {
+  id: string;
+  previousStatus: CampaignApplicationStatus;
+  status: CampaignApplicationStatus;
+  /** @nullable */
+  rejectionReason: AdminCampaignApplicationDecisionRejectionReason;
+  /** @nullable */
+  note: string | null;
+  /** @nullable */
+  changeReason: string | null;
+  decidedByName: string;
+  decidedAt: string;
+}
+
+/**
+ * @nullable
+ */
+export type CreatorCampaignApplicationRejectionReason = typeof CreatorCampaignApplicationRejectionReason[keyof typeof CreatorCampaignApplicationRejectionReason] | null;
+
+
+export const CreatorCampaignApplicationRejectionReason = {
+  FOLLOWERS_BELOW_REQUIREMENT: 'FOLLOWERS_BELOW_REQUIREMENT',
+  NICHE_NOT_A_FIT: 'NICHE_NOT_A_FIT',
+  PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
+  APPLICATION_MESSAGE_TOO_WEAK: 'APPLICATION_MESSAGE_TOO_WEAK',
+  TOO_MANY_APPLICANTS: 'TOO_MANY_APPLICANTS',
+  OTHER: 'OTHER',
+} as const;
+
 export interface CreatorCampaignApplication {
   id: string;
   campaignId: string;
   campaignTitle: string;
   personalMessage: string;
   paymentRuleAcknowledged: boolean;
+  /** @nullable */
+  rejectionReason: CreatorCampaignApplicationRejectionReason;
+  /** @nullable */
+  decisionNote: string | null;
   status: CampaignApplicationStatus;
   appliedAt: string;
 }
@@ -353,13 +464,40 @@ export interface CreatorCampaignApplicationList {
   applications: CreatorCampaignApplication[];
 }
 
+/**
+ * @nullable
+ */
+export type AdminCampaignApplicationRejectionReason = typeof AdminCampaignApplicationRejectionReason[keyof typeof AdminCampaignApplicationRejectionReason] | null;
+
+
+export const AdminCampaignApplicationRejectionReason = {
+  FOLLOWERS_BELOW_REQUIREMENT: 'FOLLOWERS_BELOW_REQUIREMENT',
+  NICHE_NOT_A_FIT: 'NICHE_NOT_A_FIT',
+  PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
+  APPLICATION_MESSAGE_TOO_WEAK: 'APPLICATION_MESSAGE_TOO_WEAK',
+  TOO_MANY_APPLICANTS: 'TOO_MANY_APPLICANTS',
+  OTHER: 'OTHER',
+} as const;
+
 export interface AdminCampaignApplication {
   id: string;
   campaignId: string;
   campaignTitle: string;
   creatorName: string;
+  creatorCountry: string;
+  creatorNiche: CreatorNiche;
+  platforms: CreatorPlatformProfile[];
   personalMessage: string;
   paymentRuleAcknowledged: boolean;
+  /** @nullable */
+  rejectionReason: AdminCampaignApplicationRejectionReason;
+  /** @nullable */
+  decisionNote: string | null;
+  /** @nullable */
+  decidedByName: string | null;
+  /** @nullable */
+  decidedAt: string | null;
+  decisionHistory: AdminCampaignApplicationDecision[];
   status: CampaignApplicationStatus;
   appliedAt: string;
 }
