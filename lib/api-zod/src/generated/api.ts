@@ -87,6 +87,44 @@ export const ResendVerificationLinkResponse = zod.object({
 
 
 /**
+ * Always returns a generic response. In development, reset links are written to the API server logs; links are not returned to the browser.
+ * @summary Request a password reset
+ */
+export const requestPasswordResetBodyEmailMax = 320;
+
+
+
+export const RequestPasswordResetBody = zod.object({
+  "email": zod.string().email().max(requestPasswordResetBodyEmailMax)
+})
+
+export const RequestPasswordResetResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Set a new password using a one-time token
+ */
+export const resetPasswordBodyTokenMin = 32;
+export const resetPasswordBodyTokenMax = 256;
+
+export const resetPasswordBodyNewPasswordMin = 10;
+export const resetPasswordBodyNewPasswordMax = 128;
+
+
+
+export const ResetPasswordBody = zod.object({
+  "token": zod.string().min(resetPasswordBodyTokenMin).max(resetPasswordBodyTokenMax),
+  "newPassword": zod.string().min(resetPasswordBodyNewPasswordMin).max(resetPasswordBodyNewPasswordMax)
+})
+
+export const ResetPasswordResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
  * @summary Log out the current account
  */
 export const LogOutResponse = zod.object({

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { once } from "node:events";
@@ -1133,6 +1133,184 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       cookie: creatorLogin.cookie,
     });
     assert.equal(dashboardAfterLogout.response.status, 401);
+
+    const resetRequest = await request("/auth/password-reset/request", {
+      method: "POST",
+      body: { email: adminEmail },
+    });
+    assert.equal(resetRequest.response.status, 200);
+    assert.equal(typeof resetRequest.body.message, "string");
+    assert.equal(resetRequest.body.resetUrl, undefined);
+    const unknownResetRequest = await request("/auth/password-reset/request", {
+      method: "POST",
+      body: { email: `missing-${suffix}@example.test` },
+    });
+    assert.deepEqual(
+      unknownResetRequest.body,
+      resetRequest.body,
+      "password-reset requests must not reveal whether an email exists",
+    );
+
+    const resetToken = randomBytes(32).toString("base64url");
+    const adminRecord = await db.query(
+      "SELECT id FROM tech_sponsor_users WHERE email = $1",
+      [adminEmail],
+    );
+    await db.query(
+      `INSERT INTO tech_sponsor_password_reset_tokens (token_hash, user_id, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '30 minutes')`,
+      [hashToken(resetToken), adminRecord.rows[0].id],
+    );
+    const resetPassword = await request("/auth/password-reset/confirm", {
+      method: "POST",
+      body: {
+        token: resetToken,
+        newPassword: "safe-reset-password-456",
+      },
+    });
+    assert.equal(resetPassword.response.status, 200);
+    const reusedResetToken = await request("/auth/password-reset/confirm", {
+      method: "POST",
+      body: {
+        token: resetToken,
+        newPassword: "safe-reset-password-789",
+      },
+    });
+    assert.equal(reusedResetToken.response.status, 400);
+    const oldAdminSession = await request("/auth/me", {
+      cookie: adminLogin.cookie,
+    });
+    assert.equal(oldAdminSession.response.status, 401);
+    const oldAdminPassword = await request("/auth/login", {
+      method: "POST",
+      body: { email: adminEmail, password: "safe-test-password-123" },
+    });
+    assert.equal(oldAdminPassword.response.status, 401);
+    const newAdminPassword = await request("/auth/login", {
+      method: "POST",
+      body: { email: adminEmail, password: "safe-reset-password-456" },
+    });
+    assert.equal(newAdminPassword.response.status, 200);
+    assert.equal(newAdminPassword.body.role, "ADMIN");
+
+    const expiredResetToken = randomBytes(32).toString("base64url");
+    await db.query(
+      `INSERT INTO tech_sponsor_password_reset_tokens (token_hash, user_id, expires_at)
+       VALUES ($1, $2, NOW() - INTERVAL '1 second')`,
+      [hashToken(expiredResetToken), adminRecord.rows[0].id],
+    );
+    const expiredReset = await request("/auth/password-reset/confirm", {
+      method: "POST",
+      body: {
+        token: expiredResetToken,
+        newPassword: "safe-reset-password-999",
+      },
+    });
+    assert.equal(expiredReset.response.status, 400);
+
+    const devPort = await findAvailablePort();
+    const devServer = spawn(
+      process.execPath,
+      [fileURLToPath(new URL("../dist/index.mjs", import.meta.url))],
+      {
+        cwd: fileURLToPath(new URL("..", import.meta.url)),
+        env: {
+          ...process.env,
+          ADMIN_EMAILS: adminEmail,
+          NODE_ENV: "development",
+          PORT: String(devPort),
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+    let devOutput = "";
+    const appendDevOutput = (chunk) => {
+      devOutput += chunk.toString();
+    };
+    devServer.stdout.on("data", appendDevOutput);
+    devServer.stderr.on("data", appendDevOutput);
+
+    try {
+      const devBaseUrl = `http://127.0.0.1:${devPort}/api`;
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        if (devServer.exitCode !== null) {
+          throw new Error("Development reset test server exited before becoming ready.");
+        }
+        try {
+          const response = await fetch(`${devBaseUrl}/healthz`);
+          if (response.ok) break;
+        } catch {
+          // The development server may still be starting.
+        }
+        await delay(100);
+      }
+
+      async function requestDevelopmentReset() {
+        const outputOffset = devOutput.length;
+        const response = await fetch(`${devBaseUrl}/auth/password-reset/request`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email: adminEmail }),
+        });
+        assert.equal(response.status, 200);
+        const body = await response.json();
+        assert.equal(body.resetUrl, undefined);
+
+        let resetUrl = null;
+        for (let attempt = 0; attempt < 40 && !resetUrl; attempt += 1) {
+          const recentOutput = devOutput
+            .slice(outputOffset)
+            .replace(/\u001b\[[0-9;]*m/g, "");
+          const match = recentOutput.match(/resetUrl:\s*["']?([^\s"']+)/);
+          if (match) resetUrl = match[1];
+          else await delay(25);
+        }
+        const safeOutput = devOutput
+          .slice(outputOffset)
+          .replace(/\u001b\[[0-9;]*m/g, "")
+          .replace(/(resetUrl:\s*["']?)[^\s"']+/g, "$1[redacted]");
+        assert.ok(
+          resetUrl,
+          `Development reset link should be available in server logs. Output: ${safeOutput.slice(-1200)}`,
+        );
+        return new URL(resetUrl).searchParams.get("token");
+      }
+
+      const firstDevToken = await requestDevelopmentReset();
+      const secondDevToken = await requestDevelopmentReset();
+      assert.ok(firstDevToken);
+      assert.ok(secondDevToken);
+      assert.notEqual(firstDevToken, secondDevToken);
+
+      const rotatedTokenResult = await fetch(
+        `${devBaseUrl}/auth/password-reset/confirm`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            token: firstDevToken,
+            newPassword: "safe-reset-password-111",
+          }),
+        },
+      );
+      assert.equal(rotatedTokenResult.status, 400);
+
+      const currentDevTokenResult = await fetch(
+        `${devBaseUrl}/auth/password-reset/confirm`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            token: secondDevToken,
+            newPassword: "safe-reset-password-222",
+          }),
+        },
+      );
+      assert.equal(currentDevTokenResult.status, 200);
+    } finally {
+      devServer.kill("SIGTERM");
+      if (devServer.exitCode === null) await once(devServer, "exit").catch(() => {});
+    }
   } finally {
     server.kill("SIGTERM");
     if (server.exitCode === null) await once(server, "exit").catch(() => {});

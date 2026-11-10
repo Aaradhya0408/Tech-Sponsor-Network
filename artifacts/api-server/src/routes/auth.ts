@@ -17,7 +17,11 @@ import {
   LogInBody,
   LogInResponse,
   LogOutResponse,
+  RequestPasswordResetBody,
+  RequestPasswordResetResponse,
   ResendVerificationLinkBody,
+  ResetPasswordBody,
+  ResetPasswordResponse,
   SignUpBody,
   SignUpResponse,
   VerifyEmailBody,
@@ -25,6 +29,7 @@ import {
 } from "@workspace/api-zod";
 import {
   db,
+  passwordResetTokensTable,
   sessionsTable,
   usersTable,
   verificationTokensTable,
@@ -41,6 +46,7 @@ const router: IRouter = Router();
 const SESSION_COOKIE = "tsn_session";
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 const scryptAsync = promisify(scrypt);
 
 if (typeof process.env.ADMIN_EMAILS !== "string") {
@@ -318,6 +324,100 @@ router.post("/auth/resend-verification", async (req, res): Promise<void> => {
       ...(process.env.NODE_ENV === "development" && verificationUrl
         ? { verificationUrl: verificationUrl.toString() }
         : {}),
+    }),
+  );
+});
+
+router.post("/auth/password-reset/request", async (req, res): Promise<void> => {
+  const parsed = RequestPasswordResetBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Enter a valid email address." });
+    return;
+  }
+
+  const genericMessage =
+    "If an account exists for that email, password reset instructions will be available shortly.";
+
+  if (process.env.NODE_ENV === "development") {
+    const email = parsed.data.email.trim().toLowerCase();
+    const [user] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1);
+
+    if (user) {
+      const resetToken = randomBytes(32).toString("base64url");
+      const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+      await db.transaction(async (tx) => {
+        await tx
+          .delete(passwordResetTokensTable)
+          .where(eq(passwordResetTokensTable.userId, user.id));
+        await tx.insert(passwordResetTokensTable).values({
+          tokenHash: hashToken(resetToken),
+          userId: user.id,
+          expiresAt,
+        });
+      });
+
+      const origin =
+        req.get("origin") ?? `${req.protocol}://${req.get("host") ?? "localhost"}`;
+      const resetUrl = new URL("/reset-password", origin);
+      resetUrl.searchParams.set("token", resetToken);
+      req.log.info(
+        { email, resetUrl: resetUrl.toString() },
+        "Password reset link (development only)",
+      );
+    }
+  }
+
+  res.json(RequestPasswordResetResponse.parse({ message: genericMessage }));
+});
+
+router.post("/auth/password-reset/confirm", async (req, res): Promise<void> => {
+  const parsed = ResetPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      error: "Enter a valid reset link and a password of at least 10 characters.",
+    });
+    return;
+  }
+
+  const tokenHash = hashToken(parsed.data.token);
+  const newPasswordHash = await hashPassword(parsed.data.newPassword);
+  const reset = await db.transaction(async (tx) => {
+    const [resetToken] = await tx
+      .delete(passwordResetTokensTable)
+      .where(eq(passwordResetTokensTable.tokenHash, tokenHash))
+      .returning({
+        userId: passwordResetTokensTable.userId,
+        expiresAt: passwordResetTokensTable.expiresAt,
+      });
+
+    if (!resetToken || resetToken.expiresAt <= new Date()) return false;
+
+    const [updatedUser] = await tx
+      .update(usersTable)
+      .set({ passwordHash: newPasswordHash })
+      .where(eq(usersTable.id, resetToken.userId))
+      .returning({ id: usersTable.id });
+    if (!updatedUser) return false;
+
+    await tx
+      .delete(passwordResetTokensTable)
+      .where(eq(passwordResetTokensTable.userId, updatedUser.id));
+    await tx.delete(sessionsTable).where(eq(sessionsTable.userId, updatedUser.id));
+    return true;
+  });
+
+  if (!reset) {
+    res.status(400).json({ error: "This password reset link is invalid or expired." });
+    return;
+  }
+
+  res.json(
+    ResetPasswordResponse.parse({
+      message: "Your password has been updated. Sign in with your new password.",
     }),
   );
 });

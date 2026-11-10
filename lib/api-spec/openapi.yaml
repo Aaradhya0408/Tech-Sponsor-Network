@@ -129,6 +129,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /auth/password-reset/request:
+    post:
+      operationId: requestPasswordReset
+      tags: [auth]
+      summary: Request a password reset
+      description: Always returns a generic response. In development, reset links are written to the API server logs; links are not returned to the browser.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequestInput"
+      responses:
+        "200":
+          description: Generic password reset request result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasswordResetRequestResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/password-reset/confirm:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Set a new password using a one-time token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetInput"
+      responses:
+        "200":
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthMessage"
+        "400":
+          description: Invalid or expired reset link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /auth/logout:
     post:
       operationId: logOut
@@ -887,6 +936,28 @@ components:
           minLength: 32
           maxLength: 256
       required: [token]
+    PasswordResetRequestInput:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+      required: [email]
+    PasswordResetInput:
+      type: object
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          minLength: 32
+          maxLength: 256
+        newPassword:
+          type: string
+          minLength: 10
+          maxLength: 128
+      required: [token, newPassword]
     AuthUser:
       type: object
       properties:
@@ -919,6 +990,12 @@ components:
         verificationUrl:
           type: string
           format: uri
+      required: [message]
+    PasswordResetRequestResult:
+      type: object
+      properties:
+        message:
+          type: string
       required: [message]
     CreatorCountry:
       type: string

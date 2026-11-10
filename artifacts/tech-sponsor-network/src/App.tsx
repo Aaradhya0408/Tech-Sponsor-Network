@@ -27,6 +27,7 @@ import { AdminApplicationsPage, CreatorApplicationsPage } from '@/components/app
 import { CampaignDiscovery, CreatorCampaignDetail } from '@/components/creator-campaigns';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ForgotPasswordPage, ResetPasswordPage } from '@/components/password-reset';
 import NotFound from '@/pages/not-found';
 import { COUNTRY_OPTIONS } from '@/lib/countries';
 
@@ -193,6 +194,9 @@ function Login() {
       <FormField label="Email address" name="email" type="email" placeholder="you@studio.com" autoComplete="email" icon={<Mail size={16} />} />
       <FormField label="Password" name="password" type="password" placeholder="Your password" autoComplete="current-password" icon={<LockKeyhole size={16} />} />
       {error && <Notice kind="error" text={error} />}
+      <div className="text-right">
+        <Link href="/forgot-password" data-testid="link-forgot-password" className="text-sm font-semibold text-primary hover:underline">Forgot your password?</Link>
+      </div>
       {verificationRequired && <>
         <button
           type="button"
@@ -647,6 +651,8 @@ function Router() {
         <Route path="/" component={Landing} />
         <Route path="/signup" component={Signup} />
         <Route path="/login" component={Login} />
+        <Route path="/forgot-password" component={ForgotPasswordPage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/dashboard"><Dashboard /></Route>
         <Route path="/admin/dashboard"><Dashboard admin /></Route>
         <Route path="/campaigns" component={CampaignDiscovery} />

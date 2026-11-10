@@ -42,6 +42,24 @@ export interface VerifyEmailInput {
   token: string;
 }
 
+export interface PasswordResetRequestInput {
+  /** @maxLength 320 */
+  email: string;
+}
+
+export interface PasswordResetInput {
+  /**
+     * @minLength 32
+     * @maxLength 256
+     */
+  token: string;
+  /**
+     * @minLength 10
+     * @maxLength 128
+     */
+  newPassword: string;
+}
+
 export type AuthUserRole = typeof AuthUserRole[keyof typeof AuthUserRole];
 
 
@@ -66,6 +84,10 @@ export interface AuthMessage {
 export interface SignUpResult {
   message: string;
   verificationUrl?: string;
+}
+
+export interface PasswordResetRequestResult {
+  message: string;
 }
 
 /**
