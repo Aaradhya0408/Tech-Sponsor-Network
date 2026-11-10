@@ -1,0 +1,37 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "api-server": {
+      "root": "artifacts/api-server",
+      "framework": "express"
+    },
+    "mockup-sandbox": {
+      "root": "artifacts/mockup-sandbox",
+      "framework": "vite"
+    },
+    "tech-sponsor-network": {
+      "root": "artifacts/tech-sponsor-network",
+      "framework": "vite"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "api-server"
+      }
+    },
+    {
+      "source": "/mockup/(.*)",
+      "destination": {
+        "service": "mockup-sandbox"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "tech-sponsor-network"
+      }
+    }
+  ]
+}
