@@ -88,6 +88,7 @@ export interface SignUpResult {
 
 export interface PasswordResetRequestResult {
   message: string;
+  resetUrl?: string;
 }
 
 /**

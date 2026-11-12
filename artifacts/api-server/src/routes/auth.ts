@@ -337,6 +337,7 @@ router.post("/auth/password-reset/request", async (req, res): Promise<void> => {
 
   const genericMessage =
     "If an account exists for that email, password reset instructions will be available shortly.";
+  let resetUrl: URL | undefined;
 
   if (process.env.NODE_ENV === "development") {
     const email = parsed.data.email.trim().toLowerCase();
@@ -362,7 +363,7 @@ router.post("/auth/password-reset/request", async (req, res): Promise<void> => {
 
       const origin =
         req.get("origin") ?? `${req.protocol}://${req.get("host") ?? "localhost"}`;
-      const resetUrl = new URL("/reset-password", origin);
+      resetUrl = new URL("/reset-password", origin);
       resetUrl.searchParams.set("token", resetToken);
       req.log.info(
         { email, resetUrl: resetUrl.toString() },
@@ -371,7 +372,14 @@ router.post("/auth/password-reset/request", async (req, res): Promise<void> => {
     }
   }
 
-  res.json(RequestPasswordResetResponse.parse({ message: genericMessage }));
+  res.json(
+    RequestPasswordResetResponse.parse({
+      message: genericMessage,
+      ...(process.env.NODE_ENV === "development" && resetUrl
+        ? { resetUrl: resetUrl.toString() }
+        : {}),
+    }),
+  );
 });
 
 router.post("/auth/password-reset/confirm", async (req, res): Promise<void> => {

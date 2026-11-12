@@ -428,7 +428,7 @@ export const getRequestPasswordResetUrl = () => {
 }
 
 /**
- * Always returns a generic response. In development, reset links are written to the API server logs; links are not returned to the browser.
+ * Always returns a generic response. For a matching account in development, the reset link is written to the API server logs and included in the response. Production responses never include the link.
  * @summary Request a password reset
  */
 export const requestPasswordReset = async (passwordResetRequestInput: PasswordResetRequestInput, options?: Parameters<typeof customFetch>[1]): Promise<PasswordResetRequestResult> => {

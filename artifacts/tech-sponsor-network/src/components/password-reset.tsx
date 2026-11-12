@@ -104,6 +104,7 @@ type RequestValues = z.infer<typeof requestSchema>;
 export function ForgotPasswordPage() {
   const requestReset = useRequestPasswordReset();
   const [submitted, setSubmitted] = useState(false);
+  const [resetUrl, setResetUrl] = useState("");
   const form = useForm<RequestValues>({
     resolver: zodResolver(requestSchema),
     defaultValues: { email: "" },
@@ -111,9 +112,15 @@ export function ForgotPasswordPage() {
 
   function submit(values: RequestValues) {
     setSubmitted(false);
+    setResetUrl("");
     requestReset.mutate(
       { data: { email: values.email.trim() } },
-      { onSuccess: () => setSubmitted(true) },
+      {
+        onSuccess: (response) => {
+          setSubmitted(true);
+          setResetUrl(response.resetUrl ?? "");
+        },
+      },
     );
   }
 
@@ -158,10 +165,26 @@ export function ForgotPasswordPage() {
                 available shortly.
               </FormNotice>
               <FormNotice kind="info">
-                For security, the reset link is not shown on this page. In
-                development, it is written to the API Server logs. Production
-                email delivery needs an email provider.
+                Development reset links appear below when an account matches.
+                Production responses never include the reset link.
               </FormNotice>
+              {resetUrl && (
+                <div
+                  className="rounded-xl border border-[#bed1c1] bg-[#e7efe6] p-4"
+                  data-testid="panel-dev-password-reset-link"
+                >
+                  <p className="text-xs font-semibold text-[#315848]">
+                    Development password reset link
+                  </p>
+                  <a
+                    href={resetUrl}
+                    data-testid="link-dev-password-reset"
+                    className="mt-2 inline-flex items-center gap-2 break-all text-sm font-semibold text-primary underline underline-offset-4"
+                  >
+                    Reset your password <ArrowRight size={15} className="shrink-0" />
+                  </a>
+                </div>
+              )}
             </>
           )}
           {requestReset.isError && (

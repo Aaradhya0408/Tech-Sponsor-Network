@@ -1223,13 +1223,6 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
         stdio: ["ignore", "pipe", "pipe"],
       },
     );
-    let devOutput = "";
-    const appendDevOutput = (chunk) => {
-      devOutput += chunk.toString();
-    };
-    devServer.stdout.on("data", appendDevOutput);
-    devServer.stderr.on("data", appendDevOutput);
-
     try {
       const devBaseUrl = `http://127.0.0.1:${devPort}/api`;
       for (let attempt = 0; attempt < 60; attempt += 1) {
@@ -1246,7 +1239,6 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       }
 
       async function requestDevelopmentReset() {
-        const outputOffset = devOutput.length;
         const response = await fetch(`${devBaseUrl}/auth/password-reset/request`, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -1254,26 +1246,11 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
         });
         assert.equal(response.status, 200);
         const body = await response.json();
-        assert.equal(body.resetUrl, undefined);
-
-        let resetUrl = null;
-        for (let attempt = 0; attempt < 40 && !resetUrl; attempt += 1) {
-          const recentOutput = devOutput
-            .slice(outputOffset)
-            .replace(/\u001b\[[0-9;]*m/g, "");
-          const match = recentOutput.match(/resetUrl:\s*["']?([^\s"']+)/);
-          if (match) resetUrl = match[1];
-          else await delay(25);
-        }
-        const safeOutput = devOutput
-          .slice(outputOffset)
-          .replace(/\u001b\[[0-9;]*m/g, "")
-          .replace(/(resetUrl:\s*["']?)[^\s"']+/g, "$1[redacted]");
-        assert.ok(
-          resetUrl,
-          `Development reset link should be available in server logs. Output: ${safeOutput.slice(-1200)}`,
-        );
-        return new URL(resetUrl).searchParams.get("token");
+        assert.equal(typeof body.resetUrl, "string");
+        const parsedResetUrl = new URL(body.resetUrl);
+        assert.equal(parsedResetUrl.pathname, "/reset-password");
+        assert.ok(parsedResetUrl.searchParams.get("token"));
+        return parsedResetUrl.searchParams.get("token");
       }
 
       const firstDevToken = await requestDevelopmentReset();

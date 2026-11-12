@@ -134,7 +134,7 @@ paths:
       operationId: requestPasswordReset
       tags: [auth]
       summary: Request a password reset
-      description: Always returns a generic response. In development, reset links are written to the API server logs; links are not returned to the browser.
+      description: Always returns a generic response. For a matching account in development, the reset link is written to the API server logs and included in the response. Production responses never include the link.
       requestBody:
         required: true
         content:
@@ -996,6 +996,9 @@ components:
       properties:
         message:
           type: string
+        resetUrl:
+          type: string
+          format: uri
       required: [message]
     CreatorCountry:
       type: string

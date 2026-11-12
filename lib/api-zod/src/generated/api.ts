@@ -87,7 +87,7 @@ export const ResendVerificationLinkResponse = zod.object({
 
 
 /**
- * Always returns a generic response. In development, reset links are written to the API server logs; links are not returned to the browser.
+ * Always returns a generic response. For a matching account in development, the reset link is written to the API server logs and included in the response. Production responses never include the link.
  * @summary Request a password reset
  */
 export const requestPasswordResetBodyEmailMax = 320;
@@ -99,7 +99,8 @@ export const RequestPasswordResetBody = zod.object({
 })
 
 export const RequestPasswordResetResponse = zod.object({
-  "message": zod.string()
+  "message": zod.string(),
+  "resetUrl": zod.string().url().optional()
 })
 
 
