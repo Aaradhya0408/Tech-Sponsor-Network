@@ -2,7 +2,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, KeyRound, Mail } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { z } from "zod";
 import {
   useRequestPasswordReset,
@@ -235,8 +235,9 @@ type ResetValues = z.infer<typeof resetSchema>;
 
 export function ResetPasswordPage() {
   const resetPassword = useResetPassword();
-  const [location, setLocation] = useLocation();
-  const token = new URLSearchParams(location.split("?")[1] ?? "").get("token") ?? "";
+  const [, setLocation] = useLocation();
+  const search = useSearch();
+  const token = new URLSearchParams(search).get("token") ?? "";
   const [success, setSuccess] = useState(false);
   const form = useForm<ResetValues>({
     resolver: zodResolver(resetSchema),
