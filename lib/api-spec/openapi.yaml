@@ -24,6 +24,8 @@ tags:
     description: Creator campaign applications
   - name: admin-applications
     description: Read-only campaign application review
+  - name: invoices
+    description: Creator invoice submission and administrator payment tracking
 paths:
   /healthz:
     get:
@@ -883,6 +885,336 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /creator/applications/{applicationId}/invoice-upload-url:
+    post:
+      operationId: requestInvoiceUploadUrl
+      tags: [invoices]
+      summary: Request a private invoice or work-photo upload URL
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceUploadInput"
+      responses:
+        "200":
+          description: Short-lived private upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceUploadResult"
+        "400":
+          description: File metadata is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Application is not eligible for invoice submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /creator/applications/{applicationId}/invoice-terms:
+    get:
+      operationId: getCreatorInvoiceTerms
+      tags: [invoices]
+      summary: Get campaign reward terms for an eligible invoice
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Reward cap and currency for this application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceTerms"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Application is not eligible for invoice submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /creator/applications/{applicationId}/invoice:
+    post:
+      operationId: createCreatorInvoice
+      tags: [invoices]
+      summary: Submit one invoice for an accepted or winning application
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+      responses:
+        "201":
+          description: Invoice submitted with Pending status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorInvoice"
+        "400":
+          description: Invoice fields or uploaded files are invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Application is not eligible for invoice submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: An invoice already exists for the application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /creator/invoices:
+    get:
+      operationId: listCreatorInvoices
+      tags: [invoices]
+      summary: List invoices belonging to the signed-in creator
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Creator invoices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorInvoiceList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Creator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/invoices:
+    get:
+      operationId: listAdminInvoices
+      tags: [invoices]
+      summary: List all submitted invoices for administrators
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Invoices with creator and campaign information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminInvoiceList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/invoices/{invoiceId}/paid:
+    patch:
+      operationId: markAdminInvoicePaid
+      tags: [invoices]
+      summary: Record payment for a pending invoice
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoicePaidInput"
+      responses:
+        "200":
+          description: Invoice marked Paid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminInvoice"
+        "400":
+          description: Payment date or note is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Invoice has already been paid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /creator/invoices/{invoiceId}/files/{fileKind}:
+    get:
+      operationId: getCreatorInvoiceFile
+      tags: [invoices]
+      summary: Open an invoice file or work photo as its creator
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: fileKind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [invoice, work-photo]
+      responses:
+        "200":
+          description: Private file streamed after ownership verification
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Creator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Invoice or file not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/invoices/{invoiceId}/files/{fileKind}:
+    get:
+      operationId: getAdminInvoiceFile
+      tags: [invoices]
+      summary: Open an invoice file or work photo as an administrator
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: fileKind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [invoice, work-photo]
+      responses:
+        "200":
+          description: Private file streamed after administrator authorization
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Invoice or file not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   securitySchemes:
     SessionCookie:
@@ -1497,6 +1829,197 @@ components:
           items:
             $ref: "#/components/schemas/CreatorCampaignApplication"
       required: [applications]
+    InvoiceUploadInput:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum: [INVOICE, WORK_PHOTO]
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        size:
+          type: integer
+          minimum: 1
+          maximum: 5242880
+        contentType:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required: [kind, name, size, contentType]
+    InvoiceUploadResult:
+      type: object
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+      required: [uploadURL, objectPath]
+    InvoiceTerms:
+      type: object
+      properties:
+        rewardAmount:
+          type: number
+          exclusiveMinimum: 0
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+      required: [rewardAmount, currency]
+    InvoiceInput:
+      type: object
+      additionalProperties: false
+      properties:
+        invoiceNumber:
+          type: string
+          minLength: 1
+          maxLength: 80
+        invoiceDate:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        amount:
+          type: number
+          exclusiveMinimum: 0
+          multipleOf: 0.01
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        description:
+          type: string
+          minLength: 1
+          maxLength: 300
+        workUrl:
+          type: string
+          format: uri
+          maxLength: 2048
+        invoiceObjectPath:
+          type: string
+          minLength: 1
+          maxLength: 512
+        workPhotoObjectPath:
+          type: ["string", "null"]
+          maxLength: 512
+        confirmed:
+          type: boolean
+          const: true
+      required:
+        - invoiceNumber
+        - invoiceDate
+        - amount
+        - currency
+        - description
+        - workUrl
+        - invoiceObjectPath
+        - confirmed
+    InvoicePaidInput:
+      type: object
+      additionalProperties: false
+      properties:
+        paidDate:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        note:
+          type: string
+          maxLength: 300
+      required: [paidDate]
+    InvoiceStatus:
+      type: string
+      enum: [PENDING, PAID]
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        applicationId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignTitle:
+          type: string
+        creatorName:
+          type: string
+        creatorEmail:
+          type: string
+          format: email
+        invoiceNumber:
+          type: string
+        invoiceDate:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        amount:
+          type: number
+        currency:
+          type: string
+        description:
+          type: string
+        workUrl:
+          type: string
+          format: uri
+        hasWorkPhoto:
+          type: boolean
+        status:
+          $ref: "#/components/schemas/InvoiceStatus"
+        paidDate:
+          type: ["string", "null"]
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        paidNote:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - applicationId
+        - campaignId
+        - campaignTitle
+        - creatorName
+        - creatorEmail
+        - invoiceNumber
+        - invoiceDate
+        - amount
+        - currency
+        - description
+        - workUrl
+        - hasWorkPhoto
+        - status
+        - paidDate
+        - paidNote
+        - createdAt
+    CreatorInvoice:
+      allOf:
+        - $ref: "#/components/schemas/Invoice"
+    CreatorInvoiceList:
+      type: object
+      properties:
+        invoices:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreatorInvoice"
+      required: [invoices]
+    AdminInvoice:
+      allOf:
+        - $ref: "#/components/schemas/Invoice"
+        - type: object
+          properties:
+            paidByName:
+              type: ["string", "null"]
+            paidRecordedAt:
+              type: ["string", "null"]
+              format: date-time
+          required: [paidByName, paidRecordedAt]
+    AdminInvoiceList:
+      type: object
+      properties:
+        invoices:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminInvoice"
+      required: [invoices]
     AdminCampaignApplication:
       type: object
       properties:

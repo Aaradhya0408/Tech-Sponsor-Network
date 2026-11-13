@@ -487,6 +487,135 @@ export interface CreatorCampaignApplicationList {
   applications: CreatorCampaignApplication[];
 }
 
+export type InvoiceUploadInputKind = typeof InvoiceUploadInputKind[keyof typeof InvoiceUploadInputKind];
+
+
+export const InvoiceUploadInputKind = {
+  INVOICE: 'INVOICE',
+  WORK_PHOTO: 'WORK_PHOTO',
+} as const;
+
+export interface InvoiceUploadInput {
+  kind: InvoiceUploadInputKind;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  name: string;
+  /**
+     * @minimum 1
+     * @maximum 5242880
+     */
+  size: number;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  contentType: string;
+}
+
+export interface InvoiceUploadResult {
+  uploadURL: string;
+  objectPath: string;
+}
+
+export interface InvoiceTerms {
+  /** @exclusiveMinimum 0 */
+  rewardAmount: number;
+  /** @pattern ^[A-Z]{3}$ */
+  currency: string;
+}
+
+export interface InvoiceInput {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  invoiceNumber: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  invoiceDate: string;
+  /** @exclusiveMinimum 0 */
+  amount: number;
+  /** @pattern ^[A-Z]{3}$ */
+  currency: string;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  description: string;
+  /** @maxLength 2048 */
+  workUrl: string;
+  /**
+     * @minLength 1
+     * @maxLength 512
+     */
+  invoiceObjectPath: string;
+  /**
+     * @maxLength 512
+     * @nullable
+     */
+  workPhotoObjectPath?: string | null;
+  confirmed: true;
+}
+
+export interface InvoicePaidInput {
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  paidDate: string;
+  /** @maxLength 300 */
+  note?: string;
+}
+
+export type InvoiceStatus = typeof InvoiceStatus[keyof typeof InvoiceStatus];
+
+
+export const InvoiceStatus = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+} as const;
+
+export interface Invoice {
+  id: string;
+  applicationId: string;
+  campaignId: string;
+  campaignTitle: string;
+  creatorName: string;
+  creatorEmail: string;
+  invoiceNumber: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  invoiceDate: string;
+  amount: number;
+  currency: string;
+  description: string;
+  workUrl: string;
+  hasWorkPhoto: boolean;
+  status: InvoiceStatus;
+  /**
+     * @nullable
+     * @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$
+     */
+  paidDate: string | null;
+  /** @nullable */
+  paidNote: string | null;
+  createdAt: string;
+}
+
+export type CreatorInvoice = Invoice;
+
+export interface CreatorInvoiceList {
+  invoices: CreatorInvoice[];
+}
+
+export type AdminInvoice = Invoice & ({
+  /** @nullable */
+  paidByName: string | null;
+  /** @nullable */
+  paidRecordedAt: string | null;
+});
+
+export interface AdminInvoiceList {
+  invoices: AdminInvoice[];
+}
+
 /**
  * @nullable
  */

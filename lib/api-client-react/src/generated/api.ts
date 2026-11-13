@@ -24,6 +24,8 @@ import type {
   AdminCampaignApplicationList,
   AdminCampaignList,
   AdminCreatorProfiles,
+  AdminInvoice,
+  AdminInvoiceList,
   AuthMessage,
   AuthUser,
   CampaignApplicationDecisionInput,
@@ -34,12 +36,19 @@ import type {
   CreatorApprovalInput,
   CreatorCampaignApplication,
   CreatorCampaignApplicationList,
+  CreatorInvoice,
+  CreatorInvoiceList,
   CreatorPlatform,
   CreatorPlatformVerificationInput,
   CreatorProfile,
   CreatorProfileInput,
   ErrorResponse,
   HealthStatus,
+  InvoiceInput,
+  InvoicePaidInput,
+  InvoiceTerms,
+  InvoiceUploadInput,
+  InvoiceUploadResult,
   LoginInput,
   PasswordResetInput,
   PasswordResetRequestInput,
@@ -2242,4 +2251,666 @@ export const useUpdateAdminCampaignStatus = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getUpdateAdminCampaignStatusMutationOptions(options));
     }
+
+export const getRequestInvoiceUploadUrlUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/creator/applications/${applicationId}/invoice-upload-url`
+}
+
+/**
+ * @summary Request a private invoice or work-photo upload URL
+ */
+export const requestInvoiceUploadUrl = async (applicationId: string,
+    invoiceUploadInput: InvoiceUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<InvoiceUploadResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<InvoiceUploadResult>(getRequestInvoiceUploadUrlUrl(applicationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(invoiceUploadInput)
+  }
+);}
+
+
+
+
+
+export const getRequestInvoiceUploadUrlMutationKey = () => ['requestInvoiceUploadUrl'] as const;
+
+export const getRequestInvoiceUploadUrlMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestInvoiceUploadUrl>>, TError,RequestInvoiceUploadUrlMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestInvoiceUploadUrl>>, TError,RequestInvoiceUploadUrlMutationVariables, TContext> => {
+
+const mutationKey = getRequestInvoiceUploadUrlMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestInvoiceUploadUrl>>, RequestInvoiceUploadUrlMutationVariables> = (props) => {
+          const {applicationId,data} = props ?? {};
+
+          return  requestInvoiceUploadUrl(applicationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestInvoiceUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestInvoiceUploadUrl>>>
+    export type RequestInvoiceUploadUrlMutationBody = BodyType<InvoiceUploadInput>
+    export type RequestInvoiceUploadUrlMutationError = ErrorType<ErrorResponse>
+    export type RequestInvoiceUploadUrlMutationVariables = {applicationId: string;data: BodyType<InvoiceUploadInput>}
+
+    /**
+ * @summary Request a private invoice or work-photo upload URL
+ */
+export const useRequestInvoiceUploadUrl = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestInvoiceUploadUrl>>, TError,RequestInvoiceUploadUrlMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestInvoiceUploadUrl>>,
+        TError,
+        RequestInvoiceUploadUrlMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestInvoiceUploadUrlMutationOptions(options));
+    }
+
+export const getGetCreatorInvoiceTermsUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/creator/applications/${applicationId}/invoice-terms`
+}
+
+/**
+ * @summary Get campaign reward terms for an eligible invoice
+ */
+export const getCreatorInvoiceTerms = async (applicationId: string, options?: Parameters<typeof customFetch>[1]): Promise<InvoiceTerms> => {
+
+  return customFetch<InvoiceTerms>(getGetCreatorInvoiceTermsUrl(applicationId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCreatorInvoiceTermsQueryKey = (applicationId: string,) => {
+    return [
+    `/api/creator/applications/${applicationId}/invoice-terms`
+    ] as const;
+    }
+
+
+export const getGetCreatorInvoiceTermsQueryOptions = <TData = Awaited<ReturnType<typeof getCreatorInvoiceTerms>>, TError = ErrorType<ErrorResponse>>(applicationId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreatorInvoiceTerms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCreatorInvoiceTermsQueryKey(applicationId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCreatorInvoiceTerms>>> = ({ signal }) => getCreatorInvoiceTerms(applicationId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: applicationId !== null && applicationId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCreatorInvoiceTerms>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCreatorInvoiceTermsQueryResult = NonNullable<Awaited<ReturnType<typeof getCreatorInvoiceTerms>>>
+export type GetCreatorInvoiceTermsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get campaign reward terms for an eligible invoice
+ */
+
+export function useGetCreatorInvoiceTerms<TData = Awaited<ReturnType<typeof getCreatorInvoiceTerms>>, TError = ErrorType<ErrorResponse>>(
+ applicationId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreatorInvoiceTerms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCreatorInvoiceTermsQueryOptions(applicationId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateCreatorInvoiceUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/creator/applications/${applicationId}/invoice`
+}
+
+/**
+ * @summary Submit one invoice for an accepted or winning application
+ */
+export const createCreatorInvoice = async (applicationId: string,
+    invoiceInput: InvoiceInput, options?: Parameters<typeof customFetch>[1]): Promise<CreatorInvoice> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CreatorInvoice>(getCreateCreatorInvoiceUrl(applicationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(invoiceInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCreatorInvoiceMutationKey = () => ['createCreatorInvoice'] as const;
+
+export const getCreateCreatorInvoiceMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreatorInvoice>>, TError,CreateCreatorInvoiceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCreatorInvoice>>, TError,CreateCreatorInvoiceMutationVariables, TContext> => {
+
+const mutationKey = getCreateCreatorInvoiceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCreatorInvoice>>, CreateCreatorInvoiceMutationVariables> = (props) => {
+          const {applicationId,data} = props ?? {};
+
+          return  createCreatorInvoice(applicationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCreatorInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof createCreatorInvoice>>>
+    export type CreateCreatorInvoiceMutationBody = BodyType<InvoiceInput>
+    export type CreateCreatorInvoiceMutationError = ErrorType<ErrorResponse>
+    export type CreateCreatorInvoiceMutationVariables = {applicationId: string;data: BodyType<InvoiceInput>}
+
+    /**
+ * @summary Submit one invoice for an accepted or winning application
+ */
+export const useCreateCreatorInvoice = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreatorInvoice>>, TError,CreateCreatorInvoiceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCreatorInvoice>>,
+        TError,
+        CreateCreatorInvoiceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCreatorInvoiceMutationOptions(options));
+    }
+
+export const getListCreatorInvoicesUrl = () => {
+
+
+
+
+  return `/api/creator/invoices`
+}
+
+/**
+ * @summary List invoices belonging to the signed-in creator
+ */
+export const listCreatorInvoices = async ( options?: Parameters<typeof customFetch>[1]): Promise<CreatorInvoiceList> => {
+
+  return customFetch<CreatorInvoiceList>(getListCreatorInvoicesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCreatorInvoicesQueryKey = () => {
+    return [
+    `/api/creator/invoices`
+    ] as const;
+    }
+
+
+export const getListCreatorInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof listCreatorInvoices>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCreatorInvoicesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCreatorInvoices>>> = ({ signal }) => listCreatorInvoices({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCreatorInvoices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCreatorInvoicesQueryResult = NonNullable<Awaited<ReturnType<typeof listCreatorInvoices>>>
+export type ListCreatorInvoicesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List invoices belonging to the signed-in creator
+ */
+
+export function useListCreatorInvoices<TData = Awaited<ReturnType<typeof listCreatorInvoices>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCreatorInvoicesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAdminInvoicesUrl = () => {
+
+
+
+
+  return `/api/admin/invoices`
+}
+
+/**
+ * @summary List all submitted invoices for administrators
+ */
+export const listAdminInvoices = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminInvoiceList> => {
+
+  return customFetch<AdminInvoiceList>(getListAdminInvoicesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminInvoicesQueryKey = () => {
+    return [
+    `/api/admin/invoices`
+    ] as const;
+    }
+
+
+export const getListAdminInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminInvoices>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminInvoicesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminInvoices>>> = ({ signal }) => listAdminInvoices({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminInvoices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminInvoicesQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminInvoices>>>
+export type ListAdminInvoicesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List all submitted invoices for administrators
+ */
+
+export function useListAdminInvoices<TData = Awaited<ReturnType<typeof listAdminInvoices>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminInvoicesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getMarkAdminInvoicePaidUrl = (invoiceId: string,) => {
+
+
+
+
+  return `/api/admin/invoices/${invoiceId}/paid`
+}
+
+/**
+ * @summary Record payment for a pending invoice
+ */
+export const markAdminInvoicePaid = async (invoiceId: string,
+    invoicePaidInput: InvoicePaidInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminInvoice> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminInvoice>(getMarkAdminInvoicePaidUrl(invoiceId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(invoicePaidInput)
+  }
+);}
+
+
+
+
+
+export const getMarkAdminInvoicePaidMutationKey = () => ['markAdminInvoicePaid'] as const;
+
+export const getMarkAdminInvoicePaidMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAdminInvoicePaid>>, TError,MarkAdminInvoicePaidMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markAdminInvoicePaid>>, TError,MarkAdminInvoicePaidMutationVariables, TContext> => {
+
+const mutationKey = getMarkAdminInvoicePaidMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markAdminInvoicePaid>>, MarkAdminInvoicePaidMutationVariables> = (props) => {
+          const {invoiceId,data} = props ?? {};
+
+          return  markAdminInvoicePaid(invoiceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkAdminInvoicePaidMutationResult = NonNullable<Awaited<ReturnType<typeof markAdminInvoicePaid>>>
+    export type MarkAdminInvoicePaidMutationBody = BodyType<InvoicePaidInput>
+    export type MarkAdminInvoicePaidMutationError = ErrorType<ErrorResponse>
+    export type MarkAdminInvoicePaidMutationVariables = {invoiceId: string;data: BodyType<InvoicePaidInput>}
+
+    /**
+ * @summary Record payment for a pending invoice
+ */
+export const useMarkAdminInvoicePaid = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAdminInvoicePaid>>, TError,MarkAdminInvoicePaidMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markAdminInvoicePaid>>,
+        TError,
+        MarkAdminInvoicePaidMutationVariables,
+        TContext
+      > => {
+      return useMutation(getMarkAdminInvoicePaidMutationOptions(options));
+    }
+
+export const getGetCreatorInvoiceFileUrl = (invoiceId: string,
+    fileKind: 'invoice' | 'work-photo',) => {
+
+
+
+
+  return `/api/creator/invoices/${invoiceId}/files/${fileKind}`
+}
+
+/**
+ * @summary Open an invoice file or work photo as its creator
+ */
+export const getCreatorInvoiceFile = async (invoiceId: string,
+    fileKind: 'invoice' | 'work-photo', options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetCreatorInvoiceFileUrl(invoiceId,fileKind),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCreatorInvoiceFileQueryKey = (invoiceId: string,
+    fileKind: 'invoice' | 'work-photo',) => {
+    return [
+    `/api/creator/invoices/${invoiceId}/files/${fileKind}`
+    ] as const;
+    }
+
+
+export const getGetCreatorInvoiceFileQueryOptions = <TData = Awaited<ReturnType<typeof getCreatorInvoiceFile>>, TError = ErrorType<ErrorResponse>>(invoiceId: string,
+    fileKind: 'invoice' | 'work-photo', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreatorInvoiceFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCreatorInvoiceFileQueryKey(invoiceId,fileKind);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCreatorInvoiceFile>>> = ({ signal }) => getCreatorInvoiceFile(invoiceId,fileKind, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: invoiceId !== null && invoiceId !== undefined && fileKind !== null && fileKind !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCreatorInvoiceFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCreatorInvoiceFileQueryResult = NonNullable<Awaited<ReturnType<typeof getCreatorInvoiceFile>>>
+export type GetCreatorInvoiceFileQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Open an invoice file or work photo as its creator
+ */
+
+export function useGetCreatorInvoiceFile<TData = Awaited<ReturnType<typeof getCreatorInvoiceFile>>, TError = ErrorType<ErrorResponse>>(
+ invoiceId: string,
+    fileKind: 'invoice' | 'work-photo', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreatorInvoiceFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCreatorInvoiceFileQueryOptions(invoiceId,fileKind,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAdminInvoiceFileUrl = (invoiceId: string,
+    fileKind: 'invoice' | 'work-photo',) => {
+
+
+
+
+  return `/api/admin/invoices/${invoiceId}/files/${fileKind}`
+}
+
+/**
+ * @summary Open an invoice file or work photo as an administrator
+ */
+export const getAdminInvoiceFile = async (invoiceId: string,
+    fileKind: 'invoice' | 'work-photo', options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetAdminInvoiceFileUrl(invoiceId,fileKind),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminInvoiceFileQueryKey = (invoiceId: string,
+    fileKind: 'invoice' | 'work-photo',) => {
+    return [
+    `/api/admin/invoices/${invoiceId}/files/${fileKind}`
+    ] as const;
+    }
+
+
+export const getGetAdminInvoiceFileQueryOptions = <TData = Awaited<ReturnType<typeof getAdminInvoiceFile>>, TError = ErrorType<ErrorResponse>>(invoiceId: string,
+    fileKind: 'invoice' | 'work-photo', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminInvoiceFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminInvoiceFileQueryKey(invoiceId,fileKind);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminInvoiceFile>>> = ({ signal }) => getAdminInvoiceFile(invoiceId,fileKind, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: invoiceId !== null && invoiceId !== undefined && fileKind !== null && fileKind !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminInvoiceFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminInvoiceFileQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminInvoiceFile>>>
+export type GetAdminInvoiceFileQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Open an invoice file or work photo as an administrator
+ */
+
+export function useGetAdminInvoiceFile<TData = Awaited<ReturnType<typeof getAdminInvoiceFile>>, TError = ErrorType<ErrorResponse>>(
+ invoiceId: string,
+    fileKind: 'invoice' | 'work-photo', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminInvoiceFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminInvoiceFileQueryOptions(invoiceId,fileKind,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

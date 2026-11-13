@@ -6,6 +6,7 @@ import adminCampaignsRouter from "./admin-campaigns";
 import creatorCampaignsRouter from "./creator-campaigns";
 import creatorApplicationsRouter from "./creator-applications";
 import adminApplicationsRouter from "./admin-applications";
+import invoicesRouter from "./invoices";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(adminCampaignsRouter);
 router.use(creatorCampaignsRouter);
 router.use(creatorApplicationsRouter);
 router.use(adminApplicationsRouter);
+router.use(invoicesRouter);
 
 export default router;

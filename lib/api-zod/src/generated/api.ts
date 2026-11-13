@@ -795,3 +795,240 @@ export const UpdateAdminCampaignStatusResponse = zod.object({
 })
 
 
+/**
+ * @summary Request a private invoice or work-photo upload URL
+ */
+export const RequestInvoiceUploadUrlParams = zod.object({
+  "applicationId": zod.coerce.string().uuid()
+})
+
+export const requestInvoiceUploadUrlBodyNameMax = 255;
+
+export const requestInvoiceUploadUrlBodySizeMax = 5242880;
+
+export const requestInvoiceUploadUrlBodyContentTypeMax = 100;
+
+
+
+export const RequestInvoiceUploadUrlBody = zod.object({
+  "kind": zod.enum(['INVOICE', 'WORK_PHOTO']),
+  "name": zod.string().min(1).max(requestInvoiceUploadUrlBodyNameMax),
+  "size": zod.number().int().min(1).max(requestInvoiceUploadUrlBodySizeMax),
+  "contentType": zod.string().min(1).max(requestInvoiceUploadUrlBodyContentTypeMax)
+})
+
+export const RequestInvoiceUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string()
+})
+
+
+/**
+ * @summary Get campaign reward terms for an eligible invoice
+ */
+export const GetCreatorInvoiceTermsParams = zod.object({
+  "applicationId": zod.coerce.string().uuid()
+})
+
+export const getCreatorInvoiceTermsResponseRewardAmountExclusiveMin = 0;
+
+export const getCreatorInvoiceTermsResponseCurrencyRegExp = new RegExp('^[A-Z]{3}$');
+
+
+export const GetCreatorInvoiceTermsResponse = zod.object({
+  "rewardAmount": zod.number().gt(getCreatorInvoiceTermsResponseRewardAmountExclusiveMin),
+  "currency": zod.string().regex(getCreatorInvoiceTermsResponseCurrencyRegExp)
+})
+
+
+/**
+ * @summary Submit one invoice for an accepted or winning application
+ */
+export const CreateCreatorInvoiceParams = zod.object({
+  "applicationId": zod.coerce.string().uuid()
+})
+
+export const createCreatorInvoiceBodyInvoiceNumberMax = 80;
+
+export const createCreatorInvoiceBodyInvoiceDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const createCreatorInvoiceBodyAmountExclusiveMin = 0;
+export const createCreatorInvoiceBodyAmountMultipleOf = 0.01;
+
+export const createCreatorInvoiceBodyCurrencyRegExp = new RegExp('^[A-Z]{3}$');
+export const createCreatorInvoiceBodyDescriptionMax = 300;
+
+export const createCreatorInvoiceBodyWorkUrlMax = 2048;
+
+export const createCreatorInvoiceBodyInvoiceObjectPathMax = 512;
+
+export const createCreatorInvoiceBodyWorkPhotoObjectPathMax = 512;
+
+
+
+export const CreateCreatorInvoiceBody = zod.object({
+  "invoiceNumber": zod.string().min(1).max(createCreatorInvoiceBodyInvoiceNumberMax),
+  "invoiceDate": zod.string().regex(createCreatorInvoiceBodyInvoiceDateRegExp),
+  "amount": zod.number().gt(createCreatorInvoiceBodyAmountExclusiveMin).multipleOf(createCreatorInvoiceBodyAmountMultipleOf),
+  "currency": zod.string().regex(createCreatorInvoiceBodyCurrencyRegExp),
+  "description": zod.string().min(1).max(createCreatorInvoiceBodyDescriptionMax),
+  "workUrl": zod.string().url().max(createCreatorInvoiceBodyWorkUrlMax),
+  "invoiceObjectPath": zod.string().min(1).max(createCreatorInvoiceBodyInvoiceObjectPathMax),
+  "workPhotoObjectPath": zod.string().max(createCreatorInvoiceBodyWorkPhotoObjectPathMax).nullish(),
+  "confirmed": zod.literal(true)
+})
+
+export const createCreatorInvoiceResponseOneInvoiceDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const createCreatorInvoiceResponseOnePaidDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+
+
+export const CreateCreatorInvoiceResponse = zod.object({
+  "id": zod.string().uuid(),
+  "applicationId": zod.string().uuid(),
+  "campaignId": zod.string().uuid(),
+  "campaignTitle": zod.string(),
+  "creatorName": zod.string(),
+  "creatorEmail": zod.string().email(),
+  "invoiceNumber": zod.string(),
+  "invoiceDate": zod.string().regex(createCreatorInvoiceResponseOneInvoiceDateRegExp),
+  "amount": zod.number(),
+  "currency": zod.string(),
+  "description": zod.string(),
+  "workUrl": zod.string().url(),
+  "hasWorkPhoto": zod.boolean(),
+  "status": zod.enum(['PENDING', 'PAID']),
+  "paidDate": zod.string().regex(createCreatorInvoiceResponseOnePaidDateRegExp).nullable(),
+  "paidNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List invoices belonging to the signed-in creator
+ */
+export const listCreatorInvoicesResponseInvoicesItemOneInvoiceDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const listCreatorInvoicesResponseInvoicesItemOnePaidDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+
+
+export const ListCreatorInvoicesResponse = zod.object({
+  "invoices": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "applicationId": zod.string().uuid(),
+  "campaignId": zod.string().uuid(),
+  "campaignTitle": zod.string(),
+  "creatorName": zod.string(),
+  "creatorEmail": zod.string().email(),
+  "invoiceNumber": zod.string(),
+  "invoiceDate": zod.string().regex(listCreatorInvoicesResponseInvoicesItemOneInvoiceDateRegExp),
+  "amount": zod.number(),
+  "currency": zod.string(),
+  "description": zod.string(),
+  "workUrl": zod.string().url(),
+  "hasWorkPhoto": zod.boolean(),
+  "status": zod.enum(['PENDING', 'PAID']),
+  "paidDate": zod.string().regex(listCreatorInvoicesResponseInvoicesItemOnePaidDateRegExp).nullable(),
+  "paidNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary List all submitted invoices for administrators
+ */
+export const listAdminInvoicesResponseInvoicesItemOneInvoiceDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const listAdminInvoicesResponseInvoicesItemOnePaidDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+
+
+export const ListAdminInvoicesResponse = zod.object({
+  "invoices": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "applicationId": zod.string().uuid(),
+  "campaignId": zod.string().uuid(),
+  "campaignTitle": zod.string(),
+  "creatorName": zod.string(),
+  "creatorEmail": zod.string().email(),
+  "invoiceNumber": zod.string(),
+  "invoiceDate": zod.string().regex(listAdminInvoicesResponseInvoicesItemOneInvoiceDateRegExp),
+  "amount": zod.number(),
+  "currency": zod.string(),
+  "description": zod.string(),
+  "workUrl": zod.string().url(),
+  "hasWorkPhoto": zod.boolean(),
+  "status": zod.enum(['PENDING', 'PAID']),
+  "paidDate": zod.string().regex(listAdminInvoicesResponseInvoicesItemOnePaidDateRegExp).nullable(),
+  "paidNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "paidByName": zod.string().nullable(),
+  "paidRecordedAt": zod.coerce.date().nullable()
+})))
+})
+
+
+/**
+ * @summary Record payment for a pending invoice
+ */
+export const MarkAdminInvoicePaidParams = zod.object({
+  "invoiceId": zod.coerce.string().uuid()
+})
+
+export const markAdminInvoicePaidBodyPaidDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const markAdminInvoicePaidBodyNoteMax = 300;
+
+
+
+export const MarkAdminInvoicePaidBody = zod.object({
+  "paidDate": zod.string().regex(markAdminInvoicePaidBodyPaidDateRegExp),
+  "note": zod.string().max(markAdminInvoicePaidBodyNoteMax).optional()
+})
+
+export const markAdminInvoicePaidResponseOneInvoiceDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const markAdminInvoicePaidResponseOnePaidDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+
+
+export const MarkAdminInvoicePaidResponse = zod.object({
+  "id": zod.string().uuid(),
+  "applicationId": zod.string().uuid(),
+  "campaignId": zod.string().uuid(),
+  "campaignTitle": zod.string(),
+  "creatorName": zod.string(),
+  "creatorEmail": zod.string().email(),
+  "invoiceNumber": zod.string(),
+  "invoiceDate": zod.string().regex(markAdminInvoicePaidResponseOneInvoiceDateRegExp),
+  "amount": zod.number(),
+  "currency": zod.string(),
+  "description": zod.string(),
+  "workUrl": zod.string().url(),
+  "hasWorkPhoto": zod.boolean(),
+  "status": zod.enum(['PENDING', 'PAID']),
+  "paidDate": zod.string().regex(markAdminInvoicePaidResponseOnePaidDateRegExp).nullable(),
+  "paidNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "paidByName": zod.string().nullable(),
+  "paidRecordedAt": zod.coerce.date().nullable()
+}))
+
+
+/**
+ * @summary Open an invoice file or work photo as its creator
+ */
+export const GetCreatorInvoiceFileParams = zod.object({
+  "invoiceId": zod.coerce.string().uuid(),
+  "fileKind": zod.enum(['invoice', 'work-photo'])
+})
+
+export const GetCreatorInvoiceFileResponse = zod.unknown()
+
+
+/**
+ * @summary Open an invoice file or work photo as an administrator
+ */
+export const GetAdminInvoiceFileParams = zod.object({
+  "invoiceId": zod.coerce.string().uuid(),
+  "fileKind": zod.enum(['invoice', 'work-photo'])
+})
+
+export const GetAdminInvoiceFileResponse = zod.unknown()
+
+
