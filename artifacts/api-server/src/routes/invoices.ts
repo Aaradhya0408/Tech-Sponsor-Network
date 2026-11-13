@@ -27,7 +27,6 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import {
   createStagingUpload,
   deletePrivateObject,
-  getPrivateObject,
   isCreatorStagingPath,
   readPrivateObject,
   removeStagingObject,
@@ -294,6 +293,7 @@ router.post(
     const photoStagingPath = body.data.workPhotoObjectPath ?? null;
     if (
       !isRealDate(invoiceDate) ||
+      !body.data.invoiceNumber.trim() ||
       !description ||
       description.length > 300 ||
       !isHttpUrl(body.data.workUrl)
@@ -649,14 +649,8 @@ async function serveInvoiceFile(
     return;
   }
   try {
-    const file = getPrivateObject(objectPath);
-    const [exists] = await file.exists();
-    if (!exists) {
-      error(res, 404, "Invoice file not found.");
-      return;
-    }
     await streamPrivateObject(
-      file,
+      objectPath,
       res,
       contentType,
       fileKind === "invoice" ? `${invoice.invoiceNumber}.pdf` : "work-photo",

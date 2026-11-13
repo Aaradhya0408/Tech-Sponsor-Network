@@ -2,3 +2,4 @@
 - [API response contracts](api-response-contracts.md) — Zod-parse every response with all fields required by the generated contract; omissions can turn successful writes into 500s.
 - [Application decision audit](application-decision-audit.md) — update the current decision and append its actor/timestamp history atomically; require a reason for later transitions.
 - [Safe database schema sync](safe-database-schema-sync.md) — stop when Drizzle proposes truncating unrelated populated tables; inspect the diff and apply only the intended additive change.
+- [Private App Storage access](private-app-storage.md) — use sidecar-signed object requests; the API server cannot discover the Google Cloud project ID for the Storage SDK.
