@@ -53,6 +53,12 @@ export const creatorProfilesTable = pgTable("tech_sponsor_creator_profiles", {
     .notNull()
     .default("PENDING_APPROVAL"),
   rejectionReason: text("rejection_reason"),
+  campaignAlertsEnabled: boolean("campaign_alerts_enabled")
+    .notNull()
+    .default(true),
+  campaignAlertsTokenVersion: uuid("campaign_alerts_token_version")
+    .notNull()
+    .defaultRandom(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

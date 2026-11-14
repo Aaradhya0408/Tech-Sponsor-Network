@@ -20,6 +20,7 @@ export interface CreatorProfile {
   approvalStatus: CreatorApprovalStatus;
   /** @nullable */
   rejectionReason: string | null;
+  campaignAlertsEnabled: boolean;
   /**
      * @minimum 0
      * @maximum 100

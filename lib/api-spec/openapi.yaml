@@ -1123,6 +1123,90 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /admin/email-log:
+    get:
+      operationId: listAdminEmailLog
+      tags: [email]
+      summary: List the latest transactional email attempts
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Most recent email delivery attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminEmailLog"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/email-log/test:
+    post:
+      operationId: sendAdminTestEmail
+      tags: [email]
+      summary: Send a test email to the signed-in administrator
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Test email attempt result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTestEmailResult"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /email/campaign-alerts/unsubscribe:
+    get:
+      operationId: unsubscribeFromCampaignAlerts
+      tags: [email]
+      summary: Turn off campaign alerts using the emailed secure link
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 32
+            maxLength: 128
+      responses:
+        "200":
+          description: Confirmation that campaign alerts are disabled
+          content:
+            text/html:
+              schema:
+                type: string
+        "400":
+          description: The unsubscribe link is invalid
+          content:
+            text/html:
+              schema:
+                type: string
   /creator/invoices/{invoiceId}/files/{fileKind}:
     get:
       operationId: getCreatorInvoiceFile
@@ -1390,7 +1474,9 @@ components:
           maxItems: 6
           items:
             $ref: "#/components/schemas/CreatorPlatformInput"
-      required: [displayName, bio, country, niche, platforms]
+        campaignAlertsEnabled:
+          type: boolean
+      required: [displayName, bio, country, niche, platforms, campaignAlertsEnabled]
     CreatorPlatformProfile:
       type: object
       properties:
@@ -1426,6 +1512,8 @@ components:
           $ref: "#/components/schemas/CreatorApprovalStatus"
         rejectionReason:
           type: ["string", "null"]
+        campaignAlertsEnabled:
+          type: boolean
         completeness:
           type: integer
           minimum: 0
@@ -1443,6 +1531,7 @@ components:
         - proofCode
         - approvalStatus
         - rejectionReason
+        - campaignAlertsEnabled
         - completeness
         - platforms
     AdminCreatorProfile:
@@ -2020,6 +2109,48 @@ components:
           items:
             $ref: "#/components/schemas/AdminInvoice"
       required: [invoices]
+    AdminEmailLogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        toEmail:
+          type: string
+        type:
+          type: string
+        subject:
+          type: string
+        status:
+          type: string
+          enum: [sent, failed, skipped]
+        errorMessage:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, toEmail, type, subject, status, errorMessage, createdAt]
+    AdminEmailLog:
+      type: object
+      properties:
+        emails:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/AdminEmailLogEntry"
+      required: [emails]
+    AdminTestEmailResult:
+      type: object
+      properties:
+        id:
+          type: ["string", "null"]
+          format: uuid
+        status:
+          type: string
+          enum: [sent, failed, skipped]
+        message:
+          type: string
+      required: [id, status, message]
     AdminCampaignApplication:
       type: object
       properties:

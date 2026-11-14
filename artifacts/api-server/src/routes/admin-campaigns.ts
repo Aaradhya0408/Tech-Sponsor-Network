@@ -17,6 +17,7 @@ import {
 } from "@workspace/db";
 import { Router, type IRouter, type Response } from "express";
 import { requireRole } from "./auth";
+import { notifyEligibleCreatorsOfCampaign } from "../lib/email-events";
 
 const router: IRouter = Router();
 
@@ -360,6 +361,9 @@ router.patch(
     res.json(
       UpdateAdminCampaignStatusResponse.parse(campaignResponse(campaign)),
     );
+    if (nextStatus === "PUBLISHED" && current.status !== "PUBLISHED") {
+      void notifyEligibleCreatorsOfCampaign(campaign.id).catch(() => {});
+    }
   },
 );
 

@@ -213,6 +213,7 @@ export const GetCreatorProfileResponse = zod.object({
   "proofCode": zod.string().regex(getCreatorProfileResponseProofCodeRegExp),
   "approvalStatus": zod.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED']),
   "rejectionReason": zod.string().nullable(),
+  "campaignAlertsEnabled": zod.boolean(),
   "completeness": zod.number().int().min(getCreatorProfileResponseCompletenessMin).max(getCreatorProfileResponseCompletenessMax),
   "platforms": zod.array(zod.object({
   "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
@@ -253,7 +254,8 @@ export const UpdateCreatorProfileBody = zod.object({
   "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
   "url": zod.string().url().max(updateCreatorProfileBodyPlatformsItemUrlMax),
   "followers": zod.number().int().min(updateCreatorProfileBodyPlatformsItemFollowersMin).max(updateCreatorProfileBodyPlatformsItemFollowersMax)
-})).max(updateCreatorProfileBodyPlatformsMax)
+})).max(updateCreatorProfileBodyPlatformsMax),
+  "campaignAlertsEnabled": zod.boolean()
 })
 
 export const updateCreatorProfileResponseCountryMax = 2;
@@ -277,6 +279,7 @@ export const UpdateCreatorProfileResponse = zod.object({
   "proofCode": zod.string().regex(updateCreatorProfileResponseProofCodeRegExp),
   "approvalStatus": zod.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED']),
   "rejectionReason": zod.string().nullable(),
+  "campaignAlertsEnabled": zod.boolean(),
   "completeness": zod.number().int().min(updateCreatorProfileResponseCompletenessMin).max(updateCreatorProfileResponseCompletenessMax),
   "platforms": zod.array(zod.object({
   "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
@@ -1008,6 +1011,52 @@ export const MarkAdminInvoicePaidResponse = zod.object({
   "paidByName": zod.string().nullable(),
   "paidRecordedAt": zod.coerce.date().nullable()
 }))
+
+
+/**
+ * @summary List the latest transactional email attempts
+ */
+export const listAdminEmailLogResponseEmailsMax = 100;
+
+
+
+export const ListAdminEmailLogResponse = zod.object({
+  "emails": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "toEmail": zod.string(),
+  "type": zod.string(),
+  "subject": zod.string(),
+  "status": zod.enum(['sent', 'failed', 'skipped']),
+  "errorMessage": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})).max(listAdminEmailLogResponseEmailsMax)
+})
+
+
+/**
+ * @summary Send a test email to the signed-in administrator
+ */
+export const SendAdminTestEmailResponse = zod.object({
+  "id": zod.string().uuid().nullable(),
+  "status": zod.enum(['sent', 'failed', 'skipped']),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Turn off campaign alerts using the emailed secure link
+ */
+export const unsubscribeFromCampaignAlertsQueryTokenMin = 32;
+export const unsubscribeFromCampaignAlertsQueryTokenMax = 128;
+
+
+
+export const UnsubscribeFromCampaignAlertsQueryParams = zod.object({
+  "userId": zod.coerce.string().uuid(),
+  "token": zod.coerce.string().min(unsubscribeFromCampaignAlertsQueryTokenMin).max(unsubscribeFromCampaignAlertsQueryTokenMax)
+})
+
+export const UnsubscribeFromCampaignAlertsResponse = zod.unknown()
 
 
 /**

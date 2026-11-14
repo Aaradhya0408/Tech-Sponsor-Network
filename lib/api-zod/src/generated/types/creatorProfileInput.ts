@@ -21,4 +21,5 @@ export interface CreatorProfileInput {
   niche: CreatorNiche;
   /** @maxItems 6 */
   platforms: CreatorPlatformInput[];
+  campaignAlertsEnabled: boolean;
 }

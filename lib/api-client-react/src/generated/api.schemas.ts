@@ -171,6 +171,7 @@ export interface CreatorProfileInput {
   niche: CreatorNiche;
   /** @maxItems 6 */
   platforms: CreatorPlatformInput[];
+  campaignAlertsEnabled: boolean;
 }
 
 export interface CreatorPlatformProfile {
@@ -192,6 +193,7 @@ export interface CreatorProfile {
   approvalStatus: CreatorApprovalStatus;
   /** @nullable */
   rejectionReason: string | null;
+  campaignAlertsEnabled: boolean;
   /**
      * @minimum 0
      * @maximum 100
@@ -616,6 +618,47 @@ export interface AdminInvoiceList {
   invoices: AdminInvoice[];
 }
 
+export type AdminEmailLogEntryStatus = typeof AdminEmailLogEntryStatus[keyof typeof AdminEmailLogEntryStatus];
+
+
+export const AdminEmailLogEntryStatus = {
+  sent: 'sent',
+  failed: 'failed',
+  skipped: 'skipped',
+} as const;
+
+export interface AdminEmailLogEntry {
+  id: string;
+  toEmail: string;
+  type: string;
+  subject: string;
+  status: AdminEmailLogEntryStatus;
+  /** @nullable */
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export interface AdminEmailLog {
+  /** @maxItems 100 */
+  emails: AdminEmailLogEntry[];
+}
+
+export type AdminTestEmailResultStatus = typeof AdminTestEmailResultStatus[keyof typeof AdminTestEmailResultStatus];
+
+
+export const AdminTestEmailResultStatus = {
+  sent: 'sent',
+  failed: 'failed',
+  skipped: 'skipped',
+} as const;
+
+export interface AdminTestEmailResult {
+  /** @nullable */
+  id: string | null;
+  status: AdminTestEmailResultStatus;
+  message: string;
+}
+
 /**
  * @nullable
  */
@@ -661,4 +704,13 @@ export interface AdminCampaignApplicationList {
 export interface ErrorResponse {
   error: string;
 }
+
+export type UnsubscribeFromCampaignAlertsParams = {
+userId: string;
+/**
+ * @minLength 32
+ * @maxLength 128
+ */
+token: string;
+};
 

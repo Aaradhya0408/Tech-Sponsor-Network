@@ -18,6 +18,7 @@ import {
 } from "@workspace/db";
 import { Router, type IRouter, type Response } from "express";
 import { requireRole } from "./auth";
+import { notifyApplicationDecision } from "../lib/email-events";
 
 const router: IRouter = Router();
 type UserRecord = typeof usersTable.$inferSelect;
@@ -309,6 +310,12 @@ router.patch(
         decidedAt: result.updated.decidedAt,
       }),
     );
+    void notifyApplicationDecision(
+      result.updated.id,
+      result.updated.status,
+      result.updated.decisionReason,
+      result.updated.decisionNote,
+    ).catch(() => {});
   },
 );
 

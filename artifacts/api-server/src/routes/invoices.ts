@@ -34,6 +34,7 @@ import {
   streamPrivateObject,
 } from "../lib/private-invoice-storage";
 import { requireRole } from "./auth";
+import { notifyPaymentMarkedPaid } from "../lib/email-events";
 
 const router: IRouter = Router();
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -599,6 +600,7 @@ router.patch(
       return;
     }
     res.json(MarkAdminInvoicePaidResponse.parse(response));
+    void notifyPaymentMarkedPaid(params.data.invoiceId).catch(() => {});
   },
 );
 

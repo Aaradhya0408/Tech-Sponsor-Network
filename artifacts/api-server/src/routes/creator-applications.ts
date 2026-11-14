@@ -15,6 +15,7 @@ import {
 } from "@workspace/db";
 import { Router, type IRouter, type Response } from "express";
 import { campaignEligibilityReasons } from "../lib/campaign-eligibility";
+import { notifyApplicationReceived } from "../lib/email-events";
 import { requireRole } from "./auth";
 
 const router: IRouter = Router();
@@ -182,6 +183,8 @@ router.post(
         creatorApplicationResponse(application, campaign.title),
       ),
     );
+    const creator = res.locals.authUser as typeof usersTable.$inferSelect;
+    void notifyApplicationReceived(creator.email, campaign.title).catch(() => {});
   },
 );
 

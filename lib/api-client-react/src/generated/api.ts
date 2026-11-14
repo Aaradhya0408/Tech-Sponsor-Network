@@ -24,8 +24,10 @@ import type {
   AdminCampaignApplicationList,
   AdminCampaignList,
   AdminCreatorProfiles,
+  AdminEmailLog,
   AdminInvoice,
   AdminInvoiceList,
+  AdminTestEmailResult,
   AuthMessage,
   AuthUser,
   CampaignApplicationDecisionInput,
@@ -55,6 +57,7 @@ import type {
   PasswordResetRequestResult,
   SignUpInput,
   SignUpResult,
+  UnsubscribeFromCampaignAlertsParams,
   VerifyEmailInput
 } from './api.schemas';
 
@@ -2749,6 +2752,241 @@ export const useMarkAdminInvoicePaid = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getMarkAdminInvoicePaidMutationOptions(options));
     }
+
+export const getListAdminEmailLogUrl = () => {
+
+
+
+
+  return `/api/admin/email-log`
+}
+
+/**
+ * @summary List the latest transactional email attempts
+ */
+export const listAdminEmailLog = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminEmailLog> => {
+
+  return customFetch<AdminEmailLog>(getListAdminEmailLogUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminEmailLogQueryKey = () => {
+    return [
+    `/api/admin/email-log`
+    ] as const;
+    }
+
+
+export const getListAdminEmailLogQueryOptions = <TData = Awaited<ReturnType<typeof listAdminEmailLog>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminEmailLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminEmailLogQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminEmailLog>>> = ({ signal }) => listAdminEmailLog({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminEmailLog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminEmailLogQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminEmailLog>>>
+export type ListAdminEmailLogQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List the latest transactional email attempts
+ */
+
+export function useListAdminEmailLog<TData = Awaited<ReturnType<typeof listAdminEmailLog>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminEmailLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminEmailLogQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSendAdminTestEmailUrl = () => {
+
+
+
+
+  return `/api/admin/email-log/test`
+}
+
+/**
+ * @summary Send a test email to the signed-in administrator
+ */
+export const sendAdminTestEmail = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminTestEmailResult> => {
+
+  return customFetch<AdminTestEmailResult>(getSendAdminTestEmailUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getSendAdminTestEmailMutationKey = () => ['sendAdminTestEmail'] as const;
+
+export const getSendAdminTestEmailMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendAdminTestEmail>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendAdminTestEmail>>, TError,void, TContext> => {
+
+const mutationKey = getSendAdminTestEmailMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendAdminTestEmail>>, void> = () => {
+
+
+          return  sendAdminTestEmail(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendAdminTestEmailMutationResult = NonNullable<Awaited<ReturnType<typeof sendAdminTestEmail>>>
+
+    export type SendAdminTestEmailMutationError = ErrorType<ErrorResponse>
+
+
+    /**
+ * @summary Send a test email to the signed-in administrator
+ */
+export const useSendAdminTestEmail = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendAdminTestEmail>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendAdminTestEmail>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSendAdminTestEmailMutationOptions(options));
+    }
+
+export const getUnsubscribeFromCampaignAlertsUrl = (params: UnsubscribeFromCampaignAlertsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/email/campaign-alerts/unsubscribe?${stringifiedParams}` : `/api/email/campaign-alerts/unsubscribe`
+}
+
+/**
+ * @summary Turn off campaign alerts using the emailed secure link
+ */
+export const unsubscribeFromCampaignAlerts = async (params: UnsubscribeFromCampaignAlertsParams, options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getUnsubscribeFromCampaignAlertsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnsubscribeFromCampaignAlertsQueryKey = (params?: UnsubscribeFromCampaignAlertsParams,) => {
+    return [
+    `/api/email/campaign-alerts/unsubscribe`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getUnsubscribeFromCampaignAlertsQueryOptions = <TData = Awaited<ReturnType<typeof unsubscribeFromCampaignAlerts>>, TError = ErrorType<string>>(params: UnsubscribeFromCampaignAlertsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof unsubscribeFromCampaignAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getUnsubscribeFromCampaignAlertsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof unsubscribeFromCampaignAlerts>>> = ({ signal }) => unsubscribeFromCampaignAlerts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof unsubscribeFromCampaignAlerts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type UnsubscribeFromCampaignAlertsQueryResult = NonNullable<Awaited<ReturnType<typeof unsubscribeFromCampaignAlerts>>>
+export type UnsubscribeFromCampaignAlertsQueryError = ErrorType<string>
+
+
+/**
+ * @summary Turn off campaign alerts using the emailed secure link
+ */
+
+export function useUnsubscribeFromCampaignAlerts<TData = Awaited<ReturnType<typeof unsubscribeFromCampaignAlerts>>, TError = ErrorType<string>>(
+ params: UnsubscribeFromCampaignAlertsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof unsubscribeFromCampaignAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getUnsubscribeFromCampaignAlertsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetCreatorInvoiceFileUrl = (invoiceId: string,
     fileKind: 'invoice' | 'work-photo',) => {

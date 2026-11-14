@@ -25,6 +25,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import AdminCampaigns from '@/components/admin-campaigns';
 import { AdminApplicationsPage, CreatorApplicationsPage } from '@/components/applications';
 import { AdminInvoicesPage } from '@/components/invoices';
+import { AdminEmailLogPage } from '@/components/email-log';
 import { CampaignDiscovery, CreatorCampaignDetail } from '@/components/creator-campaigns';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -296,7 +297,7 @@ function DevelopmentVerificationLink({ url }: { url: string }) {
 function DashboardShell({ user, admin = false, onLogout, children }: { user: AuthUser; admin?: boolean; onLogout: () => void; children: ReactNode }) {
   return <main className="min-h-[100dvh] bg-background">
     <header className="flex min-h-[76px] flex-wrap items-center justify-between gap-3 border-b border-border/80 px-5 py-3 sm:px-9 lg:px-[7vw]">
-      <Brand /><div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">{admin ? <><Link href="/admin/campaigns" data-testid="link-admin-campaigns" className="rounded-full border border-primary/30 px-3 py-2 text-[11px] font-semibold text-primary transition hover:bg-primary/5 sm:px-4 sm:text-xs">Campaigns</Link><Link href="/admin/applications" data-testid="link-admin-applications" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">Applications</Link><Link href="/admin/invoices" data-testid="link-admin-invoices" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">Invoices</Link></> : <><Link href="/campaigns" data-testid="link-creator-campaigns" className="rounded-full border border-primary/30 px-3 py-2 text-[11px] font-semibold text-primary transition hover:bg-primary/5 sm:px-4 sm:text-xs">Discover campaigns</Link><Link href="/my-campaigns" data-testid="link-creator-applications" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">My applications</Link></>}<span className="hidden text-xs text-muted-foreground md:block">{admin ? 'Network administration' : 'Creator member'}</span><button onClick={onLogout} data-testid="button-logout" className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-[11px] font-semibold transition hover:bg-muted sm:px-3.5 sm:text-xs"><LogOut size={14} /> <span className="hidden sm:inline">Sign out</span></button></div>
+      <Brand /><div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">{admin ? <><Link href="/admin/campaigns" data-testid="link-admin-campaigns" className="rounded-full border border-primary/30 px-3 py-2 text-[11px] font-semibold text-primary transition hover:bg-primary/5 sm:px-4 sm:text-xs">Campaigns</Link><Link href="/admin/applications" data-testid="link-admin-applications" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">Applications</Link><Link href="/admin/invoices" data-testid="link-admin-invoices" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">Invoices</Link><Link href="/admin/email-log" data-testid="link-admin-email-log" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">Email log</Link></> : <><Link href="/campaigns" data-testid="link-creator-campaigns" className="rounded-full border border-primary/30 px-3 py-2 text-[11px] font-semibold text-primary transition hover:bg-primary/5 sm:px-4 sm:text-xs">Discover campaigns</Link><Link href="/my-campaigns" data-testid="link-creator-applications" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">My applications</Link></>}<span className="hidden text-xs text-muted-foreground md:block">{admin ? 'Network administration' : 'Creator member'}</span><button onClick={onLogout} data-testid="button-logout" className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-[11px] font-semibold transition hover:bg-muted sm:px-3.5 sm:text-xs"><LogOut size={14} /> <span className="hidden sm:inline">Sign out</span></button></div>
     </header>
     <section className="mx-auto max-w-[1120px] px-5 py-10 sm:px-9 sm:py-14">
       <div className="page-enter">
@@ -361,6 +362,7 @@ function CreatorProfileEditor({ query }: { query: CreatorProfileQuery }) {
   const [country, setCountry] = useState('');
   const [niche, setNiche] = useState<CreatorNiche>('Technology');
   const [platforms, setPlatforms] = useState<PlatformDraft[]>([]);
+  const [campaignAlertsEnabled, setCampaignAlertsEnabled] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
@@ -372,6 +374,7 @@ function CreatorProfileEditor({ query }: { query: CreatorProfileQuery }) {
     setCountry(query.data.country);
     setNiche((NICHE_OPTIONS.includes(query.data.niche as CreatorNiche) ? query.data.niche : 'Technology') as CreatorNiche);
     setPlatforms(query.data.platforms.map(item => ({ platform: item.platform, url: item.url, followers: String(item.followers) })));
+    setCampaignAlertsEnabled(query.data.campaignAlertsEnabled ?? true);
     setInitialized(true);
   }, [query.data, initialized]);
 
@@ -438,6 +441,7 @@ function CreatorProfileEditor({ query }: { query: CreatorProfileQuery }) {
       country,
       niche,
       platforms: submittedPlatforms,
+      campaignAlertsEnabled,
     };
     saveProfile.mutate({ data: input }, {
       onSuccess: () => {
@@ -487,6 +491,15 @@ function CreatorProfileEditor({ query }: { query: CreatorProfileQuery }) {
           {platforms.length === 0 && <div className="rounded-2xl border border-dashed border-border px-5 py-7 text-center"><Globe2 size={20} className="mx-auto text-primary" /><p className="mt-2 text-sm font-semibold">Add a channel to get started</p><p className="mt-1 text-xs text-muted-foreground">Share a public profile link and your current audience size.</p></div>}
         </div>
         {platforms.length < 6 && <div className="mt-3 flex flex-wrap gap-2">{addablePlatforms.map(platform => <button key={platform} type="button" onClick={() => setPlatforms(items => [...items, { platform, url: '', followers: '' }])} data-testid={`button-add-platform-${platform.toLowerCase().replaceAll(' ', '-')}`} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-semibold transition hover:border-primary/40 hover:bg-secondary/60"><Plus size={14} /> {platform}</button>)}</div>}
+      </div>
+      <div className="mt-8 border-t border-border pt-6">
+        <label htmlFor="campaign-alerts-enabled" className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl bg-secondary/50 p-4 sm:p-5">
+          <span className="flex items-start gap-3">
+            <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-card text-primary"><Mail size={16} /></span>
+            <span><span className="block text-sm font-semibold">Email me about new campaigns</span><span className="mt-1 block max-w-lg text-xs leading-5 text-muted-foreground">Get an email when a published campaign matches your profile. This setting is saved with your profile and can be changed at any time.</span></span>
+          </span>
+          <input id="campaign-alerts-enabled" data-testid="toggle-campaign-alerts" type="checkbox" role="switch" checked={campaignAlertsEnabled} onChange={event => setCampaignAlertsEnabled(event.target.checked)} className="h-5 w-5 shrink-0 accent-primary" />
+        </label>
       </div>
       {saveError && <div className="mt-5"><Notice kind="error" text={saveError} /></div>}
       {saveMessage && <div className="mt-5"><Notice kind="success" text={saveMessage} /></div>}
@@ -662,6 +675,7 @@ function Router() {
         <Route path="/my-campaigns" component={CreatorApplicationsPage} />
         <Route path="/admin/applications" component={AdminApplicationsPage} />
         <Route path="/admin/invoices" component={AdminInvoicesPage} />
+        <Route path="/admin/email-log" component={AdminEmailLogPage} />
         <Route component={NotFound} />
       </Switch>
     </ErrorBoundary>

@@ -1,4 +1,4 @@
-import { randomInt } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import {
   and,
   asc,
@@ -110,6 +110,7 @@ function profileResponse(
     proofCode: profile.proofCode,
     approvalStatus: profile.approvalStatus,
     rejectionReason: profile.rejectionReason,
+    campaignAlertsEnabled: profile.campaignAlertsEnabled,
     completeness: creatorCompleteness(profile, platforms),
     platforms: sortedPlatforms.map((platform) => ({
       platform: platform.platform,
@@ -242,6 +243,11 @@ router.put(
           bio,
           country: parsed.data.country,
           niche: parsed.data.niche,
+          campaignAlertsEnabled: parsed.data.campaignAlertsEnabled,
+          ...(parsed.data.campaignAlertsEnabled &&
+          !currentProfile.campaignAlertsEnabled
+            ? { campaignAlertsTokenVersion: randomUUID() }
+            : {}),
           ...(currentProfile.approvalStatus === "REJECTED"
             ? {
                 approvalStatus: "PENDING_APPROVAL" as const,
