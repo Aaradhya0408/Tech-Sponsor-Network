@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, BriefcaseBusiness, CalendarDays, CircleCheck, Clock3, ExternalLink, ShieldCheck, BadgeCheck, History, UserRound } from 'lucide-react';
+import { BriefcaseBusiness, CalendarDays, CircleCheck, Clock3, ExternalLink, ShieldCheck, BadgeCheck, History, UserRound } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import {
   getGetCurrentUserQueryKey,
@@ -17,6 +17,7 @@ import {
 import type { AdminCampaignApplication, CampaignApplicationDecisionInput, CampaignApplicationStatus } from '@workspace/api-client-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { CreatorInvoiceSection } from '@/components/invoices';
+import { ResponsiveNav } from '@/components/responsive-nav';
 
 const REJECTION_REASONS = [
   { value: 'FOLLOWERS_BELOW_REQUIREMENT', label: 'Followers below the requirement' },
@@ -45,7 +46,11 @@ type DecisionValues = z.infer<typeof decisionSchema>;
 type FormMode = 'accept' | 'reject' | 'change' | 'winner';
 
 function errorMessage(error: unknown) {
-  return error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Something went wrong. Please try again.';
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = String(error.message);
+    if (message.length < 240 && !/(\bat\s.+:\d+:\d+|stack|exception|fetch failed|failed to fetch|network error|request failed|status code|http \d{3}|econn|timeout|<!doctype|<html)/i.test(message)) return message;
+  }
+  return 'Something went wrong. Please try again.';
 }
 
 function appliedDate(value: string, withTime = false) {
@@ -67,13 +72,21 @@ function reasonLabel(reason?: string | null) {
 function StatusBadge({ status, testId }: { status: CampaignApplicationStatus; testId?: string }) {
   const underReview = status === 'UNDER_REVIEW';
   const positive = status === 'ACCEPTED' || status === 'WINNER' || status === 'PAID';
-  return <span data-testid={testId ?? `status-application-${status.toLowerCase()}`} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.08em] ${underReview ? 'bg-[#f4eddf] text-[#785f44]' : positive ? 'bg-[#e7efe6] text-[#315848]' : 'bg-[#f1e5dc] text-[#8b573d]'}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(status)}</span>;
+  return <span data-testid={testId ?? `status-application-${status.toLowerCase()}`} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.08em] ${underReview ? 'bg-[#f4eddf] text-[#785f44]' : positive ? 'bg-[#e7efe6] text-[#315848]' : 'bg-[#f7e9e6] text-[#8f463d]'}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(status)}</span>;
 }
 
 function ApplicationsHeader({ admin = false }: { admin?: boolean }) {
   return <header className="flex min-h-[76px] items-center justify-between border-b border-border/80 px-5 sm:px-9 lg:px-[7vw]">
     <Link href={admin ? '/admin/dashboard' : '/dashboard'} data-testid="link-applications-brand" className="brand-mark text-foreground"><span className="brand-symbol"><span /><span /><span /></span><span className="font-semibold tracking-[-.04em]">tech sponsor<span className="text-primary">.</span></span></Link>
-    <Link href={admin ? '/admin/campaigns' : '/campaigns'} data-testid="link-applications-back" className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"><ArrowLeft size={14} /><span>{admin ? 'Campaigns' : 'Discover campaigns'}</span></Link>
+    <ResponsiveNav label={admin ? 'Administrator navigation' : 'Creator navigation'} items={admin ? [
+      { href: '/admin/campaigns', label: 'Campaigns', testId: 'link-applications-back' },
+      { href: '/admin/invoices', label: 'Invoices' },
+      { href: '/admin/email-log', label: 'Email log' },
+      { href: '/admin/dashboard', label: 'Dashboard' },
+    ] : [
+      { href: '/campaigns', label: 'Discover campaigns', testId: 'link-applications-back' },
+      { href: '/dashboard', label: 'Dashboard' },
+    ]} current={{ label: admin ? 'Applications' : 'My applications' }} />
   </header>;
 }
 
@@ -114,12 +127,13 @@ export function CreatorApplicationsPage() {
   </main>;
 }
 
-function DecisionForm({ application, mode, pending, onCancel, onSubmit }: {
+function DecisionForm({ application, mode, pending, onCancel, onSubmit, showRetry = false }: {
   application: AdminCampaignApplication;
   mode: FormMode;
   pending: boolean;
   onCancel: () => void;
   onSubmit: (data: CampaignApplicationDecisionInput) => void;
+  showRetry?: boolean;
 }) {
   const defaultStatus = mode === 'accept'
     ? 'ACCEPTED'
@@ -153,6 +167,7 @@ function DecisionForm({ application, mode, pending, onCancel, onSubmit }: {
       <FormField control={form.control} name="note" render={({ field }) => <FormItem><FormLabel className="text-xs">Note {status === 'NOT_SELECTED' && chosenReason === 'OTHER' ? '(required)' : '(optional)'}</FormLabel><FormControl><textarea {...field} data-testid={`textarea-decision-note-${application.id}`} maxLength={500} rows={3} placeholder={status === 'NOT_SELECTED' ? 'A brief, helpful explanation for the creator' : 'Optional context for the creator'} className="field resize-y !py-2.5" /></FormControl><FormMessage /></FormItem>} />
       {(mode === 'change' || mode === 'winner') && <FormField control={form.control} name="changeReason" rules={{ required: 'Explain why this decision is changing.' }} render={({ field }) => <FormItem><FormLabel className="text-xs">Reason for changing decision</FormLabel><FormControl><textarea {...field} data-testid={`textarea-change-reason-${application.id}`} required maxLength={500} rows={2} placeholder="Record why the earlier decision is being changed" className="field resize-y !py-2.5" /></FormControl><FormMessage /></FormItem>} />}
       <button type="submit" disabled={pending} data-testid={`button-submit-decision-${application.id}`} className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition hover:brightness-95 disabled:cursor-wait disabled:opacity-60">{pending ? 'Saving decision…' : mode === 'change' ? 'Save changed decision' : mode === 'winner' ? 'Confirm Winner status' : status === 'NOT_SELECTED' ? 'Confirm not selected' : 'Confirm acceptance'}</button>
+      {showRetry && <button type="button" disabled={pending} onClick={form.handleSubmit(submit)} data-testid={`button-retry-decision-${application.id}`} className="inline-flex w-full items-center justify-center rounded-full border border-border px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-50">Try again</button>}
     </form>
   </Form>;
 }
@@ -161,11 +176,13 @@ function ApplicationReviewCard({ application }: { application: AdminCampaignAppl
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<FormMode | null>(null);
   const [mutationError, setMutationError] = useState('');
+  const [actionMessage, setActionMessage] = useState('');
   const decision = useUpdateAdminCampaignApplicationDecision({
     mutation: {
       onSuccess: async () => {
         setMode(null);
         setMutationError('');
+        setActionMessage('Decision saved.');
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: getListAdminCampaignApplicationsQueryKey() }),
           queryClient.invalidateQueries({ queryKey: getListCreatorApplicationsQueryKey() }),
@@ -176,6 +193,7 @@ function ApplicationReviewCard({ application }: { application: AdminCampaignAppl
   });
   const decide = (data: CampaignApplicationDecisionInput) => {
     setMutationError('');
+    setActionMessage('');
     decision.mutate({ applicationId: application.id, data });
   };
   const alreadyDecided = application.status !== 'UNDER_REVIEW';
@@ -189,7 +207,7 @@ function ApplicationReviewCard({ application }: { application: AdminCampaignAppl
     <p data-testid={`status-payment-rule-acknowledged-${application.id}`} className="mt-3 text-[11px] font-medium text-muted-foreground">{application.paymentRuleAcknowledged ? 'Payment rule acknowledged' : 'Payment rule not acknowledged'}</p>
     {alreadyDecided && <div data-testid={`panel-current-decision-${application.id}`} className="mt-4 rounded-xl border border-[#d8dfd4] bg-[#f1f3ed] p-4">
       <div className="flex items-center gap-2 text-xs font-semibold text-[#315848]"><ShieldCheck size={15} /> Decision record</div>
-      {application.status === 'NOT_SELECTED' && <p data-testid={`text-admin-rejection-reason-${application.id}`} className="mt-2 text-sm font-semibold text-[#704832]">{reasonLabel(application.rejectionReason)}</p>}
+       {application.status === 'NOT_SELECTED' && <p data-testid={`text-admin-rejection-reason-${application.id}`} className="mt-2 text-sm font-semibold text-[#8f463d]">{reasonLabel(application.rejectionReason)}</p>}
       {application.decisionNote && <p data-testid={`text-admin-decision-note-${application.id}`} className="mt-1 whitespace-pre-wrap text-sm leading-6 text-foreground/80">{application.decisionNote}</p>}
       {application.decidedByName && application.decidedAt && <p data-testid={`text-admin-decision-author-${application.id}`} className="mt-2 text-xs text-muted-foreground">Recorded by {application.decidedByName} · {appliedDate(application.decidedAt, true)}</p>}
     </div>}
@@ -199,13 +217,14 @@ function ApplicationReviewCard({ application }: { application: AdminCampaignAppl
         {application.decisionHistory.map(entry => <li key={entry.id} data-testid={`item-decision-history-${entry.id}`} className="relative border-l border-border py-4 pl-4 last:pb-4">
           <span className="absolute -left-[5px] top-[19px] h-2 w-2 rounded-full bg-primary ring-4 ring-background" />
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs font-semibold">{statusLabel(entry.previousStatus)} <span className="px-1 text-muted-foreground">→</span> {statusLabel(entry.status)}</p><p data-testid={`text-decision-history-date-${entry.id}`} className="text-[11px] text-muted-foreground">{entry.decidedByName} · {appliedDate(entry.decidedAt, true)}</p></div>
-          {entry.rejectionReason && <p data-testid={`text-decision-history-reason-${entry.id}`} className="mt-2 text-xs font-medium text-[#704832]">{reasonLabel(entry.rejectionReason)}</p>}
+           {entry.rejectionReason && <p data-testid={`text-decision-history-reason-${entry.id}`} className="mt-2 text-xs font-medium text-[#8f463d]">{reasonLabel(entry.rejectionReason)}</p>}
           {entry.note && <p data-testid={`text-decision-history-note-${entry.id}`} className="mt-1 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">Note: {entry.note}</p>}
           {entry.changeReason && <p data-testid={`text-decision-history-change-reason-${entry.id}`} className="mt-1 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">Change reason: {entry.changeReason}</p>}
         </li>)}
       </ol>
     </details>}
-    {mutationError && <p role="alert" data-testid={`status-decision-error-${application.id}`} className="mt-3 rounded-lg border border-[#e3c2bb] bg-[#f7e9e6] px-3 py-2.5 text-xs leading-5 text-[#8f463d]">{mutationError}</p>}
+    {actionMessage && <p role="status" data-testid={`status-decision-success-${application.id}`} className="mt-3 rounded-lg border border-[#bed1c1] bg-[#e7efe6] px-3 py-2.5 text-xs leading-5 text-[#315848]">{actionMessage}</p>}
+    {mutationError && <p role="alert" data-testid={`status-decision-error-${application.id}`} className="mt-3 rounded-lg border border-[#e3c2bb] bg-[#f7e9e6] px-3 py-2.5 text-xs leading-5 text-[#8f463d]">{mutationError} The decision form is still open so you can try again.</p>}
     {application.status === 'UNDER_REVIEW' ? <div className="mt-4 flex flex-col gap-2 sm:flex-row">
       <button type="button" disabled={decision.isPending} onClick={() => setMode('accept')} data-testid={`button-accept-application-${application.id}`} className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition hover:brightness-95 disabled:opacity-50"><CircleCheck size={14} />Accept</button>
       <button type="button" disabled={decision.isPending} onClick={() => setMode('reject')} data-testid={`button-reject-application-${application.id}`} className="inline-flex items-center justify-center gap-2 rounded-full border border-[#c99783] px-4 py-2.5 text-xs font-semibold text-[#8b573d] transition hover:bg-[#f7eee8] disabled:opacity-50">Reject</button>
@@ -213,7 +232,7 @@ function ApplicationReviewCard({ application }: { application: AdminCampaignAppl
       {application.status === 'ACCEPTED' && <button type="button" disabled={decision.isPending} onClick={() => setMode('winner')} data-testid={`button-mark-winner-${application.id}`} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#e7efe6] px-4 py-2.5 text-xs font-semibold text-[#315848] transition hover:bg-[#dce8dc] disabled:opacity-50"><CircleCheck size={14} />Mark winner</button>}
       <button type="button" disabled={decision.isPending} onClick={() => setMode('change')} data-testid={`button-change-decision-${application.id}`} className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-4 py-2.5 text-xs font-semibold text-foreground transition hover:bg-muted disabled:opacity-50">Change decision</button>
     </div>}
-    {mode && <DecisionForm application={application} mode={mode} pending={decision.isPending} onCancel={() => setMode(null)} onSubmit={decide} />}
+    {mode && <DecisionForm application={application} mode={mode} pending={decision.isPending} showRetry={!!mutationError} onCancel={() => setMode(null)} onSubmit={decide} />}
   </article>;
 }
 
@@ -245,7 +264,7 @@ export function AdminApplicationsPage() {
         <div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><h1 className="serif text-4xl font-semibold tracking-[-.06em] sm:text-5xl">Campaign applications.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">A considered, traceable review of every creator submission, organized by campaign.</p></div><div data-testid="text-admin-application-count" className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold text-muted-foreground"><ShieldCheck size={14} className="text-primary" />{applicationsQuery.isLoading ? 'Loading submissions' : `${applications.length} ${applications.length === 1 ? 'submission' : 'submissions'}`}</div></div>
       </div>
       {applicationsQuery.isLoading ? <ApplicationsSkeleton admin /> : applicationsQuery.isError ? <div role="alert" data-testid="status-admin-applications-error" className="mt-8 rounded-[22px] border border-[#e3c2bb] bg-card p-6"><p className="text-sm font-semibold text-[#8f463d]">Applications couldn’t be loaded.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{errorMessage(applicationsQuery.error)}</p><button type="button" onClick={() => applicationsQuery.refetch()} data-testid="button-retry-admin-applications" className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Try again</button></div>
-        : !applications.length ? <div data-testid="empty-admin-applications" className="mt-8 rounded-[24px] border border-dashed border-border bg-card/70 px-6 py-14 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><CircleCheck size={20} /></div><div className="eyebrow mt-5 text-primary">No submissions yet</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">The campaign inbox is clear.</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Creator applications will appear here, grouped under their campaign.</p></div>
+        : !applications.length ? <div data-testid="empty-admin-applications" className="mt-8 rounded-[24px] border border-dashed border-border bg-card/70 px-6 py-14 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><CircleCheck size={20} /></div><div className="eyebrow mt-5 text-primary">No submissions yet</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">The campaign inbox is clear.</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Creator applications will appear here, grouped under their campaign.</p><Link href="/admin/campaigns" className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground">Review campaign listings</Link></div>
           : <div className="mt-8 space-y-7" data-testid="list-admin-applications">{groupedApplications.map(group => <section key={group.campaignId} data-testid={`group-admin-applications-${group.campaignId}`} className="overflow-hidden rounded-[22px] border border-border/80 bg-card"><header className="flex flex-col gap-2 border-b border-border bg-[#f0efe7] px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6"><div><div className="eyebrow text-primary">Campaign</div><h2 className="serif mt-1 text-xl font-semibold tracking-[-.04em]" data-testid={`text-admin-application-campaign-${group.campaignId}`}>{group.title}</h2></div><span data-testid={`text-admin-campaign-count-${group.campaignId}`} className="text-xs font-medium text-muted-foreground">{group.applications.length} {group.applications.length === 1 ? 'creator' : 'creators'}</span></header><div className="divide-y divide-border">{group.applications.map(application => <ApplicationReviewCard key={application.id} application={application} />)}</div></section>)}</div>}
     </section>
     <footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">Tech Sponsor Network <span className="px-2">·</span> Application register</footer>

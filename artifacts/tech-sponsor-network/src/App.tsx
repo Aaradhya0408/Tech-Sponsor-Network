@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { ArrowDownRight, ArrowRight, Check, CheckCircle2, CircleUserRound, Compass, Fingerprint, LockKeyhole, LogOut, Mail, ShieldCheck, Sparkles, UsersRound, Plus, Trash2, ExternalLink, Search, Clock3, BadgeCheck, RotateCcw, Save, Globe2, X } from 'lucide-react';
+import { ArrowDownRight, ArrowRight, Check, CheckCircle2, CircleUserRound, Compass, Fingerprint, LockKeyhole, LogOut, Mail, ShieldCheck, Sparkles, UsersRound, Plus, Trash2, ExternalLink, Search, Clock3, BadgeCheck, RotateCcw, Save, Globe2, X, Menu } from 'lucide-react';
 import { Link, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import {
   getGetCurrentUserQueryKey,
@@ -32,11 +32,15 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { ForgotPasswordPage, ResetPasswordPage } from '@/components/password-reset';
 import NotFound from '@/pages/not-found';
 import { COUNTRY_OPTIONS } from '@/lib/countries';
+import { ResponsiveNav } from '@/components/responsive-nav';
 
 const queryClient = new QueryClient();
 
 function errorText(error: unknown) {
-  if (error && typeof error === 'object' && 'message' in error) return String(error.message);
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = String(error.message);
+    if (message.length < 240 && !/(\bat\s.+:\d+:\d+|stack|exception|fetch failed|failed to fetch|network error|request failed|status code|http \d{3}|econn|timeout|<!doctype|<html)/i.test(message)) return message;
+  }
   return 'Something went wrong. Please try again.';
 }
 
@@ -53,14 +57,13 @@ function Brand({ light = false }: { light?: boolean }) {
 }
 
 function Header() {
-  const [location] = useLocation();
   return <header className="relative z-10 flex h-[76px] items-center justify-between border-b border-border/70 px-5 sm:px-9 lg:px-[7vw]">
     <Brand />
-    <nav className="flex items-center gap-2 sm:gap-5">
-      <a href="/#network" className="hidden text-sm text-muted-foreground transition hover:text-foreground sm:block">The network</a>
-      <Link href="/login" data-testid="link-login" className={`rounded-full px-4 py-2 text-sm font-semibold transition hover:bg-muted ${location === '/login' ? 'text-primary' : ''}`}>Log in</Link>
-      <Link href="/signup" data-testid="link-join" className="rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-95 sm:px-5">Join the network</Link>
-    </nav>
+    <ResponsiveNav label="Main navigation" items={[
+      { href: '/#how-it-works', label: 'How it works' },
+      { href: '/login', label: 'Log in', testId: 'link-login' },
+      { href: '/signup', label: 'Sign up', testId: 'link-join' },
+    ]} />
   </header>;
 }
 
@@ -75,13 +78,13 @@ function Landing() {
     <section className="relative mx-auto grid max-w-[1440px] items-center gap-10 px-5 pb-20 pt-14 sm:px-9 sm:pt-20 lg:min-h-[690px] lg:grid-cols-[1.05fr_.95fr] lg:px-[7vw] lg:pb-24 lg:pt-10">
       <div className="page-enter relative z-[1] max-w-[650px]">
         <div className="eyebrow mb-7 flex items-center gap-2 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> A considered community for creators</div>
-        <h1 className="serif max-w-[660px] text-[clamp(3.2rem,7.7vw,6.7rem)] font-semibold leading-[.99] tracking-[-.065em] text-foreground">Good work<br />deserves <span className="italic text-primary">good</span><br />partnerships.</h1>
+        <h1 className="serif max-w-[660px] text-[clamp(3rem,7.4vw,6.7rem)] font-semibold leading-[.99] tracking-[-.065em] text-foreground">Find brand<br />partnerships<br />that fit your work.</h1>
         <p className="mt-7 max-w-[470px] text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">A focused network connecting thoughtful creators with technology brands that belong in their work.</p>
         <div className="mt-9 flex flex-wrap items-center gap-4">
           <Link href="/signup" data-testid="link-hero-signup" className="group inline-flex items-center gap-3 rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5">
-            Apply to join <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+            Sign up <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
           </Link>
-          <Link href="/login" data-testid="link-hero-login" className="rounded-full px-5 py-3.5 text-sm font-semibold text-foreground transition hover:bg-muted">Member sign in</Link>
+          <Link href="/login" data-testid="link-hero-login" className="rounded-full px-5 py-3.5 text-sm font-semibold text-foreground transition hover:bg-muted">Log in</Link>
         </div>
         <div className="mt-12 flex items-center gap-4 border-t border-border/80 pt-5">
           <div className="flex -space-x-2">
@@ -128,12 +131,23 @@ function Landing() {
         </div>
       </div>
     </section>
+    <section id="how-it-works" className="mx-auto max-w-[1240px] px-5 py-16 sm:px-9 lg:px-[7vw] lg:py-20">
+      <div className="grid gap-8 md:grid-cols-[.8fr_1.2fr] md:items-end">
+        <div><div className="eyebrow text-primary">The process</div><h2 className="serif mt-3 max-w-sm text-3xl font-semibold leading-tight tracking-[-.05em] sm:text-4xl">Three clear steps.</h2><p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">No guesswork about how a partnership begins or what happens next.</p></div>
+        <ol className="grid gap-3 sm:grid-cols-3">
+          {[['01', 'Sign up', 'Create your creator profile and share the work you make.'], ['02', 'Apply', 'Find relevant technology campaigns and apply with a clear brief.'], ['03', 'Get paid if accepted', 'Complete the work, then submit your invoice for review.']].map(([number, title, text]) => <li key={number} className="rounded-2xl border border-border/80 bg-card p-5">
+            <span className="eyebrow text-primary">{number} / 03</span><h3 className="serif mt-3 text-xl font-semibold tracking-[-.04em]">{title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
+          </li>)}
+        </ol>
+      </div>
+      <p className="mt-6 rounded-2xl border border-[#d7d7c7] bg-[#f0efe7] px-5 py-4 text-sm font-semibold text-foreground">Payment is made only if your submission is accepted.</p>
+    </section>
     <section className="mx-auto flex max-w-[1240px] flex-col items-start justify-between gap-6 px-5 py-16 sm:px-9 md:flex-row md:items-end lg:px-[7vw] lg:py-24">
       <div><div className="eyebrow text-primary">Your next chapter starts here</div><h2 className="serif mt-4 max-w-xl text-4xl font-semibold leading-[1.08] tracking-[-.06em] sm:text-5xl">A network that takes your work seriously.</h2></div>
       <Link href="/signup" data-testid="link-footer-signup" className="group inline-flex shrink-0 items-center gap-3 rounded-full border border-primary/35 px-6 py-3.5 text-sm font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground">Request access <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" /></Link>
     </section>
     <footer className="flex flex-col gap-4 border-t border-border/80 px-5 py-7 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-9 lg:px-[7vw]">
-      <Brand /><p>Thoughtful technology partnerships, by design.</p><Link href="/admin/dashboard" data-testid="link-admin-entry" className="font-medium transition hover:text-foreground">Administrator sign in</Link>
+      <Brand /><p>Tech Sponsor Network · Thoughtful technology partnerships, by design.</p><a href="mailto:hello@example.com" className="min-h-11 inline-flex items-center font-medium transition hover:text-foreground">Contact: hello@example.com</a><Link href="/admin/dashboard" data-testid="link-admin-entry" className="min-h-11 inline-flex items-center font-medium transition hover:text-foreground">Administrator sign in</Link>
     </footer>
   </main>;
 }
@@ -274,7 +288,7 @@ function Signup() {
 function FormField({ label, name, type, placeholder, autoComplete, icon, minLength }: { label: string; name: string; type: string; placeholder: string; autoComplete: string; icon: ReactNode; minLength?: number }) {
   return <label className="block">
     <span className="mb-1.5 block text-xs font-semibold text-foreground">{label}</span>
-    <span className="relative block"><span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">{icon}</span><input className="field pl-10" data-testid={`input-${name}`} required name={name} type={type} placeholder={placeholder} autoComplete={autoComplete} minLength={minLength} /></span>
+    <span className="relative block"><span aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">{icon}</span><input className="field !pl-10" data-testid={`input-${name}`} required name={name} type={type} placeholder={placeholder} autoComplete={autoComplete} minLength={minLength} /></span>
   </label>;
 }
 
@@ -295,9 +309,15 @@ function DevelopmentVerificationLink({ url }: { url: string }) {
 }
 
 function DashboardShell({ user, admin = false, onLogout, children }: { user: AuthUser; admin?: boolean; onLogout: () => void; children: ReactNode }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   return <main className="min-h-[100dvh] bg-background">
-    <header className="flex min-h-[76px] flex-wrap items-center justify-between gap-3 border-b border-border/80 px-5 py-3 sm:px-9 lg:px-[7vw]">
-      <Brand /><div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">{admin ? <><Link href="/admin/campaigns" data-testid="link-admin-campaigns" className="rounded-full border border-primary/30 px-3 py-2 text-[11px] font-semibold text-primary transition hover:bg-primary/5 sm:px-4 sm:text-xs">Campaigns</Link><Link href="/admin/applications" data-testid="link-admin-applications" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">Applications</Link><Link href="/admin/invoices" data-testid="link-admin-invoices" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">Invoices</Link><Link href="/admin/email-log" data-testid="link-admin-email-log" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">Email log</Link></> : <><Link href="/campaigns" data-testid="link-creator-campaigns" className="rounded-full border border-primary/30 px-3 py-2 text-[11px] font-semibold text-primary transition hover:bg-primary/5 sm:px-4 sm:text-xs">Discover campaigns</Link><Link href="/my-campaigns" data-testid="link-creator-applications" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">My applications</Link></>}<span className="hidden text-xs text-muted-foreground md:block">{admin ? 'Network administration' : 'Creator member'}</span><button onClick={onLogout} data-testid="button-logout" className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-[11px] font-semibold transition hover:bg-muted sm:px-3.5 sm:text-xs"><LogOut size={14} /> <span className="hidden sm:inline">Sign out</span></button></div>
+    <header className="relative z-20 flex min-h-[76px] flex-wrap items-center justify-between gap-3 border-b border-border/80 px-5 py-3 sm:px-9 lg:px-[7vw]">
+      <Brand />
+      <button type="button" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={menuOpen} aria-controls="member-navigation" onClick={() => setMenuOpen(open => !open)} className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card sm:hidden" data-testid="button-mobile-menu">{menuOpen ? <X size={19} /> : <Menu size={19} />}</button>
+      <nav id="member-navigation" aria-label={admin ? 'Administrator navigation' : 'Creator navigation'} className={`${menuOpen ? 'flex' : 'hidden'} absolute left-0 right-0 top-full flex-col items-stretch gap-2 border-b border-border bg-background px-5 py-4 shadow-lg sm:static sm:flex sm:flex-row sm:items-center sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none`}>
+        {admin ? <><Link href="/admin/campaigns" data-testid="link-admin-campaigns" className="rounded-full border border-primary/30 px-4 py-2.5 text-xs font-semibold text-primary transition hover:bg-primary/5" onClick={() => setMenuOpen(false)}>Campaigns</Link><Link href="/admin/applications" data-testid="link-admin-applications" className="rounded-full border border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted" onClick={() => setMenuOpen(false)}>Applications</Link><Link href="/admin/invoices" data-testid="link-admin-invoices" className="rounded-full border border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted" onClick={() => setMenuOpen(false)}>Invoices</Link><Link href="/admin/email-log" data-testid="link-admin-email-log" className="rounded-full border border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted" onClick={() => setMenuOpen(false)}>Email log</Link></> : <><Link href="/campaigns" data-testid="link-creator-campaigns" className="rounded-full border border-primary/30 px-4 py-2.5 text-xs font-semibold text-primary transition hover:bg-primary/5" onClick={() => setMenuOpen(false)}>Discover campaigns</Link><Link href="/my-campaigns" data-testid="link-creator-applications" className="rounded-full border border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted" onClick={() => setMenuOpen(false)}>My applications</Link></>}
+        <span className="hidden px-2 text-xs text-muted-foreground md:block">{admin ? 'Network administration' : 'Creator member'}</span><button onClick={onLogout} data-testid="button-logout" className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-4 py-2.5 text-xs font-semibold transition hover:bg-muted"><LogOut size={14} />Sign out</button>
+      </nav>
     </header>
     <section className="mx-auto max-w-[1120px] px-5 py-10 sm:px-9 sm:py-14">
       <div className="page-enter">
@@ -551,7 +571,7 @@ function AdminReview({ query }: { query: UseQueryResult<AdminCreatorProfiles, Er
     </div>
     {actionError && <Notice kind="error" text={actionError} />}
     {actionMessage && <Notice kind="success" text={actionMessage} />}
-    {!visible.length ? <div className="rounded-[22px] border border-dashed border-border bg-card px-6 py-14 text-center" data-testid="empty-admin-profiles"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-secondary text-primary"><Search size={20} /></div><h3 className="serif mt-4 text-xl font-semibold">No profiles in this view.</h3><p className="mt-1 text-sm text-muted-foreground">{search ? 'Try another search term.' : 'New creator profiles will appear here when submitted.'}</p></div>
+    {!visible.length ? <div className="rounded-[22px] border border-dashed border-border bg-card px-6 py-14 text-center" data-testid="empty-admin-profiles"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-secondary text-primary"><Search size={20} /></div><h3 className="serif mt-4 text-xl font-semibold">No profiles in this view.</h3><p className="mt-1 text-sm text-muted-foreground">{search ? 'Try another search term.' : 'New creator profiles will appear here when submitted.'}</p>{creators.length > 0 ? <button type="button" onClick={() => { setSearch(''); setFilter('ALL'); }} className="mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-5 py-3 text-sm font-semibold text-primary hover:bg-muted">Show all profiles</button> : <Link href="/admin/dashboard" className="mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-5 py-3 text-sm font-semibold text-primary hover:bg-muted">Back to admin dashboard</Link>}</div>
       : <div className="space-y-4">{visible.map(person => <AdminCreatorCard key={person.userId} person={person} rejecting={rejecting === person.userId} reason={reason} onRejectStart={() => { setRejecting(person.userId); setReason(''); }} onRejectCancel={() => setRejecting(null)} onReasonChange={setReason} onApprove={() => decide(person, 'APPROVED')} onReject={() => decide(person, 'REJECTED', reason.trim())} onToggleVerification={(platform, verified) => verifyPlatform(person, platform, verified)} busy={approval.isPending || verification.isPending} />)}</div>}
   </div>;
 }
@@ -594,7 +614,7 @@ function ProfileLoading() {
 }
 
 function InlineError({ message, onRetry, testId }: { message: string; onRetry: () => void; testId: string }) {
-  return <div className="rounded-[22px] border border-[#e3c2bb] bg-card p-6"><Notice kind="error" text={message} /><button type="button" onClick={onRetry} data-testid={testId} className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Retry</button></div>;
+  return <div className="rounded-[22px] border border-[#e3c2bb] bg-card p-6"><Notice kind="error" text={message} /><button type="button" onClick={onRetry} data-testid={testId} className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Try again</button></div>;
 }
 
 function countryLabel(code: string) {

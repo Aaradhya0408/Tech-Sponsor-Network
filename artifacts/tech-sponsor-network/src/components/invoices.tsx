@@ -23,6 +23,7 @@ import {
 } from '@workspace/api-client-react';
 import type { AdminInvoice, CreatorCampaignApplication, CreatorInvoice, InvoiceInput } from '@workspace/api-client-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { ResponsiveNav } from '@/components/responsive-nav';
 
 const invoiceSchema = z.object({
   invoiceNumber: z.string().trim().min(1, 'Enter an invoice number.').max(80),
@@ -40,7 +41,11 @@ const paidSchema = z.object({
 });
 
 function messageOf(error: unknown) {
-  return error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Something went wrong. Please try again.';
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = String(error.message);
+    if (message.length < 240 && !/(\bat\s.+:\d+:\d+|stack|exception|fetch failed|failed to fetch|network error|request failed|status code|http \d{3}|econn|timeout|<!doctype|<html)/i.test(message)) return message;
+  }
+  return 'Something went wrong. Please try again.';
 }
 
 function shortDate(value: string) {
@@ -207,9 +212,9 @@ export function CreatorInvoiceSection({ applications, email, accountName }: { ap
     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><div className="eyebrow flex items-center gap-2 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Campaign paperwork</div><h2 className="serif mt-2 text-3xl font-semibold tracking-[-.05em]">Invoices.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Submit paperwork for accepted work and keep track of its payment status.</p></div><span data-testid="text-creator-invoice-count" className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-semibold text-muted-foreground"><ReceiptText size={14} className="text-primary" />{invoiceQuery.isLoading ? 'Loading invoices' : `${invoices.length} ${invoices.length === 1 ? 'invoice' : 'invoices'}`}</span></div>
     {invoiceQuery.isLoading ? <div data-testid="loading-creator-invoices" className="mt-5 space-y-3"><div className="h-28 animate-pulse rounded-2xl border border-border bg-card/70" /><div className="h-28 animate-pulse rounded-2xl border border-border bg-card/70" /></div>
       : invoiceQuery.isError ? <div role="alert" data-testid="status-creator-invoices-error" className="mt-5 rounded-2xl border border-[#e3c2bb] bg-card p-5"><p className="text-sm font-semibold text-[#8f463d]">Your invoices couldn’t be loaded.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{messageOf(invoiceQuery.error)}</p><button type="button" onClick={() => invoiceQuery.refetch()} data-testid="button-retry-creator-invoices" className="mt-3 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">Try again</button></div>
-      : invoices.length ? <div className="mt-5 space-y-3" data-testid="list-creator-invoices">{invoices.map(invoice => <CreatorInvoiceCard key={invoice.id} invoice={invoice} />)}</div>
-        : <div data-testid="empty-creator-invoices" className="mt-5 rounded-2xl border border-dashed border-border bg-card/60 px-5 py-7"><p className="text-sm font-semibold">No invoices submitted yet.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Once you send an invoice, its status and records will appear here.</p></div>}
-    {!!eligible.length && <div className="mt-7 space-y-3" data-testid="list-invoice-eligible-applications">
+       : invoices.length ? <div className="mt-5 space-y-3" data-testid="list-creator-invoices">{invoices.map(invoice => <CreatorInvoiceCard key={invoice.id} invoice={invoice} />)}</div>
+        : <div data-testid="empty-creator-invoices" className="mt-5 rounded-2xl border border-dashed border-border bg-card/60 px-5 py-7"><p className="text-sm font-semibold">No invoices submitted yet.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Once you send an invoice, its status and records will appear here.</p><Link href={eligible.length ? '#list-invoice-eligible-applications' : '/campaigns'} className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-primary hover:bg-muted">{eligible.length ? 'Review accepted work' : 'Browse campaigns'}</Link></div>}
+    {!!eligible.length && <div id="list-invoice-eligible-applications" className="mt-7 space-y-3" data-testid="list-invoice-eligible-applications">
       <h3 className="eyebrow text-muted-foreground">Ready for invoicing</h3>
       {eligible.map(application => <CreatorInvoiceEligibleCard key={application.id} application={application} invoice={invoiceByApplication.get(application.id)} email={email} accountName={accountName} canSubmit={!invoiceQuery.isLoading && !invoiceQuery.isError} />)}
     </div>}
@@ -236,7 +241,7 @@ function CreatorInvoiceEligibleCard({ application, invoice, email, accountName, 
   </article>;
 }
 
-function MarkPaidForm({ invoice, onCancel }: { invoice: AdminInvoice; onCancel: () => void }) {
+function MarkPaidForm({ invoice, onCancel, onDone }: { invoice: AdminInvoice; onCancel: () => void; onDone: () => void }) {
   const queryClient = useQueryClient();
   const markPaid = useMarkAdminInvoicePaid();
   const [error, setError] = useState('');
@@ -254,7 +259,7 @@ function MarkPaidForm({ invoice, onCancel }: { invoice: AdminInvoice; onCancel: 
         queryClient.invalidateQueries({ queryKey: getListCreatorApplicationsQueryKey() }),
         queryClient.invalidateQueries({ queryKey: getListAdminCampaignApplicationsQueryKey() }),
       ]);
-      onCancel();
+      onDone();
     } catch (problem) {
       setError(messageOf(problem));
     }
@@ -263,12 +268,13 @@ function MarkPaidForm({ invoice, onCancel }: { invoice: AdminInvoice; onCancel: 
     <FormField control={form.control} name="paidDate" render={({ field }) => <FormItem><FormLabel className="text-xs">Paid date · required</FormLabel><FormControl><input {...field} data-testid={`input-invoice-paid-date-${invoice.id}`} type="date" className="field !py-2.5" /></FormControl><FormMessage /></FormItem>} />
     <FormField control={form.control} name="note" render={({ field }) => <FormItem><FormLabel className="text-xs">Reference note · optional</FormLabel><FormControl><input {...field} data-testid={`input-invoice-paid-note-${invoice.id}`} maxLength={300} className="field !py-2.5" placeholder="Transfer reference or internal note" /></FormControl><FormMessage /></FormItem>} />
     <div className="flex gap-2"><button type="button" onClick={onCancel} data-testid={`button-cancel-mark-paid-${invoice.id}`} className="rounded-full border border-border px-4 py-2.5 text-xs font-semibold">Cancel</button><button type="submit" disabled={markPaid.isPending || form.formState.isSubmitting} data-testid={`button-confirm-mark-paid-${invoice.id}`} className="rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-50">{markPaid.isPending ? 'Saving…' : 'Confirm paid'}</button></div>
-    {error && <p role="alert" data-testid={`status-mark-paid-error-${invoice.id}`} className="text-xs text-[#8f463d] sm:col-span-3">{error}</p>}
+     {error && <div role="alert" data-testid={`status-mark-paid-error-${invoice.id}`} className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#8f463d] sm:col-span-3"><span>{error}</span><button type="button" onClick={form.handleSubmit(submit)} className="font-semibold underline underline-offset-2">Try again</button></div>}
   </form></Form>;
 }
 
 function AdminInvoiceCard({ invoice }: { invoice: AdminInvoice }) {
   const [editing, setEditing] = useState(false);
+  const [notice, setNotice] = useState('');
   return <article data-testid={`row-admin-invoice-${invoice.id}`} className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5">
     <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start"><div className="min-w-0"><p data-testid={`text-admin-invoice-email-${invoice.id}`} className="break-all text-sm font-semibold">{invoice.creatorEmail}</p><p className="mt-1 text-xs text-muted-foreground">{invoice.creatorName}</p><h3 data-testid={`text-admin-invoice-campaign-${invoice.id}`} className="serif mt-3 text-xl font-semibold leading-tight tracking-[-.04em]">{invoice.campaignTitle}</h3></div><InvoiceStatus status={invoice.status} testId={`status-admin-invoice-${invoice.id}`} /></div>
     <div className="mt-4 grid gap-x-6 gap-y-3 border-y border-border py-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -285,7 +291,8 @@ function AdminInvoiceCard({ invoice }: { invoice: AdminInvoice }) {
       {invoice.hasWorkPhoto && <a href={invoiceFileUrl('admin', invoice.id, 'work-photo')} target="_blank" rel="noreferrer" data-testid={`link-admin-invoice-photo-${invoice.id}`} className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-2 text-xs font-semibold transition hover:bg-muted"><Image size={14} className="text-primary" />Work photo <ExternalLink size={12} /></a>}
       {invoice.status === 'PENDING' && <button type="button" onClick={() => setEditing(open => !open)} data-testid={`button-mark-invoice-paid-${invoice.id}`} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:brightness-95"><BadgeCheck size={14} />{editing ? 'Close payment form' : 'Mark paid'}</button>}
     </div>
-    {editing && invoice.status === 'PENDING' && <MarkPaidForm invoice={invoice} onCancel={() => setEditing(false)} />}
+    {notice && <p role="status" data-testid={`status-mark-paid-success-${invoice.id}`} className="mt-3 rounded-xl border border-[#bed1c1] bg-[#e7efe6] px-3 py-2.5 text-sm text-[#315848]">{notice}</p>}
+    {editing && invoice.status === 'PENDING' && <MarkPaidForm invoice={invoice} onCancel={() => setEditing(false)} onDone={() => { setEditing(false); setNotice('Invoice marked as Paid.'); }} />}
     {invoice.paidByName && invoice.paidDate && <p data-testid={`text-admin-invoice-paid-by-${invoice.id}`} className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck size={13} className="text-primary" />Recorded by {invoice.paidByName}</p>}
   </article>;
 }
@@ -306,7 +313,7 @@ export function AdminInvoicesPage() {
     <section className="mx-auto max-w-[1120px] px-5 py-8 sm:px-9 sm:py-12">
       <div className="page-enter"><div className="eyebrow flex items-center gap-2 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Administrator workspace</div><div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><h1 className="serif text-4xl font-semibold tracking-[-.06em] sm:text-5xl">Invoice register.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Review creator paperwork and record completed payments.</p></div><span data-testid="text-admin-invoice-count" className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold text-muted-foreground"><ReceiptText size={14} className="text-primary" />{invoicesQuery.isLoading ? 'Loading invoices' : `${invoices.length} ${invoices.length === 1 ? 'invoice' : 'invoices'}`}</span></div></div>
       {invoicesQuery.isLoading ? <InvoiceSkeleton /> : invoicesQuery.isError ? <div role="alert" data-testid="status-admin-invoices-error" className="mt-7 rounded-2xl border border-[#e3c2bb] bg-card p-6"><p className="text-sm font-semibold text-[#8f463d]">The invoice register couldn’t be loaded.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{messageOf(invoicesQuery.error)}</p><button type="button" onClick={() => invoicesQuery.refetch()} data-testid="button-retry-admin-invoices" className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Try again</button></div>
-        : !invoices.length ? <div data-testid="empty-admin-invoices" className="mt-7 rounded-[24px] border border-dashed border-border bg-card/70 px-6 py-14 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><ReceiptText size={20} /></div><div className="eyebrow mt-5 text-primary">No invoices received</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">The payment register is clear.</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Submitted creator invoices will be listed here for review.</p></div>
+        : !invoices.length ? <div data-testid="empty-admin-invoices" className="mt-7 rounded-[24px] border border-dashed border-border bg-card/70 px-6 py-14 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><ReceiptText size={20} /></div><div className="eyebrow mt-5 text-primary">No invoices received</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">The payment register is clear.</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Submitted creator invoices will be listed here for review.</p><Link href="/admin/applications" className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground">View applications</Link></div>
           : <div data-testid="list-admin-invoices" className="mt-7 space-y-3">{invoices.map(invoice => <AdminInvoiceCard key={invoice.id} invoice={invoice} />)}</div>}
     </section>
     <footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">Tech Sponsor Network <span className="px-2">·</span> Invoice register</footer>
@@ -316,7 +323,12 @@ export function AdminInvoicesPage() {
 function AdminInvoiceHeader() {
   return <header className="flex min-h-[76px] flex-wrap items-center justify-between gap-3 border-b border-border/80 px-5 py-3 sm:px-9 lg:px-[7vw]">
     <Link href="/admin/dashboard" data-testid="link-admin-invoice-brand" className="brand-mark text-foreground"><span className="brand-symbol"><span /><span /><span /></span><span className="font-semibold tracking-[-.04em]">tech sponsor<span className="text-primary">.</span></span></Link>
-    <nav aria-label="Administrator navigation" className="flex flex-wrap items-center gap-2"><Link href="/admin/campaigns" data-testid="link-invoices-admin-campaigns" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">Campaigns</Link><Link href="/admin/applications" data-testid="link-invoices-admin-applications" className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs">Applications</Link><span aria-current="page" data-testid="link-invoices-admin-current" className="rounded-full border border-primary/30 bg-primary/5 px-3 py-2 text-[11px] font-semibold text-primary sm:px-4 sm:text-xs">Invoices</span></nav>
+    <ResponsiveNav label="Administrator navigation" items={[
+      { href: "/admin/campaigns", label: "Campaigns", testId: "link-invoices-admin-campaigns" },
+      { href: "/admin/applications", label: "Applications", testId: "link-invoices-admin-applications" },
+      { href: "/admin/email-log", label: "Email log" },
+      { href: "/admin/dashboard", label: "Dashboard" },
+    ]} current={{ label: "Invoices", testId: "link-invoices-admin-current" }} />
   </header>;
 }
 

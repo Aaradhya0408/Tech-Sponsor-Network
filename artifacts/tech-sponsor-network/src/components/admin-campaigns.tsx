@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CalendarDays, Check, CircleDollarSign, Plus, Radio, Save, ShieldCheck, X } from 'lucide-react';
+import { CalendarDays, Check, CircleDollarSign, Plus, Radio, Save, ShieldCheck, X } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +17,7 @@ import {
 import type { AdminCampaign, CampaignInput, CampaignStatus, CreatorNiche, CreatorPlatform } from '@workspace/api-client-react';
 import { COUNTRY_OPTIONS } from '@/lib/countries';
 import { Form } from '@/components/ui/form';
+import { ResponsiveNav } from '@/components/responsive-nav';
 
 const PAYMENT_RULE = 'Payment is made only if your submission is accepted. If your work is not accepted, no payment will be made.';
 const PLATFORMS: CreatorPlatform[] = ['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'];
@@ -54,7 +55,10 @@ function inputClass(extra = '') {
 }
 
 function errorMessage(error: unknown) {
-  if (error && typeof error === 'object' && 'message' in error) return String(error.message);
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = String(error.message);
+    if (message.length < 240 && !/(\bat\s.+:\d+:\d+|stack|exception|fetch failed|failed to fetch|network error|request failed|status code|http \d{3}|econn|timeout|<!doctype|<html)/i.test(message)) return message;
+  }
   return 'Something went wrong. Please try again.';
 }
 
@@ -209,7 +213,7 @@ function StatusPill({ status }: { status: CampaignStatus }) {
   const styles: Record<CampaignStatus, string> = {
     DRAFT: 'bg-[#e9e9df] text-[#626657]',
     PUBLISHED: 'bg-[#e1eee1] text-[#315848]',
-    CLOSED: 'bg-[#f1e5dc] text-[#8b573d]',
+    CLOSED: 'bg-[#f7e9e6] text-[#8f463d]',
   };
   return <span data-testid={`status-campaign-${status.toLowerCase()}`} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[.08em] ${styles[status]}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{status}</span>;
 }
@@ -288,7 +292,12 @@ export default function AdminCampaigns() {
   return <main className="min-h-[100dvh] bg-background">
     <header className="flex min-h-[76px] items-center justify-between border-b border-border/80 px-5 sm:px-9 lg:px-[7vw]">
       <Link href="/admin/dashboard" data-testid="link-admin-dashboard" className="brand-mark text-foreground"><span className="brand-symbol"><span /><span /><span /></span><span className="font-semibold tracking-[-.04em]">tech sponsor<span className="text-primary">.</span></span></Link>
-      <Link href="/admin/dashboard" data-testid="link-back-admin" className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted"><ArrowLeft size={14} /><span className="hidden sm:inline">Admin dashboard</span><span className="sm:hidden">Back</span></Link>
+      <ResponsiveNav label="Administrator navigation" items={[
+        { href: '/admin/dashboard', label: 'Admin dashboard', testId: 'link-back-admin' },
+        { href: '/admin/applications', label: 'Applications' },
+        { href: '/admin/invoices', label: 'Invoices' },
+        { href: '/admin/email-log', label: 'Email log' },
+      ]} current={{ label: 'Campaigns' }} />
     </header>
     <section className="mx-auto max-w-[1120px] px-5 py-8 sm:px-9 sm:py-12">
       <div className="page-enter">
@@ -303,7 +312,7 @@ export default function AdminCampaigns() {
         <div><div className="eyebrow text-primary">Fixed payment rule · applies to every campaign</div><p className="mt-1 text-sm leading-6 text-foreground">{PAYMENT_RULE}</p></div>
       </div>
       {notice && <div role="status" data-testid="status-campaign-success" className="mt-5 rounded-xl border border-[#bed1c1] bg-[#e7efe6] p-3 text-sm text-[#315848]">{notice}</div>}
-      {mutationError && <div role="alert" data-testid="status-campaign-error" className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e3c2bb] bg-[#f7e9e6] p-3 text-sm text-[#8f463d]"><span>{mutationError}</span>{campaignsQuery.isError && <button onClick={() => campaignsQuery.refetch()} data-testid="button-retry-campaigns" className="font-semibold underline underline-offset-2">Retry</button>}</div>}
+      {mutationError && <div role="alert" data-testid="status-campaign-error" className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e3c2bb] bg-[#f7e9e6] p-3 text-sm text-[#8f463d]"><span>{mutationError}</span>{campaignsQuery.isError && <button onClick={() => campaignsQuery.refetch()} data-testid="button-retry-campaigns" className="font-semibold underline underline-offset-2">Try again</button>}</div>}
 
       {formOpen && <CampaignForm key={editing?.id ?? 'new'} campaign={editing} busy={busy} onCancel={() => { setFormOpen(false); setEditing(null); }} onSave={save} error={actionError} success="" />}
       <div className="mt-9">

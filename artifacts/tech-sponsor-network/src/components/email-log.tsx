@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, Mail, RefreshCw, Send } from "lucide-react";
+import { CheckCircle2, Mail, RefreshCw, Send } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   getGetCurrentUserQueryKey,
@@ -10,6 +10,7 @@ import {
   useSendAdminTestEmail,
 } from "@workspace/api-client-react";
 import type { AdminEmailLogEntry } from "@workspace/api-client-react";
+import { ResponsiveNav } from "@/components/responsive-nav";
 
 function dateTime(value: string): string {
   const date = new Date(value);
@@ -211,7 +212,7 @@ export function AdminEmailLogPage() {
                       <p className="break-words text-xs font-semibold">
                         {email.subject}
                       </p>
-                      {email.errorMessage && (
+                      {email.errorMessage && !/(\bat\s.+:\d+:\d+|stack trace|exception:|request failed|status code|http \d{3}|failed to fetch|econn|<!doctype|<html)/i.test(email.errorMessage) && (
                         <p
                           data-testid={`text-email-error-${email.id}`}
                           className="mt-1 break-words text-xs leading-5 text-[#8f463d]"
@@ -261,37 +262,12 @@ function EmailLogHeader() {
           tech sponsor<span className="text-primary">.</span>
         </span>
       </Link>
-      <nav
-        aria-label="Administrator navigation"
-        className="flex flex-wrap items-center gap-2"
-      >
-        <Link
-          href="/admin/campaigns"
-          className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs"
-        >
-          Campaigns
-        </Link>
-        <Link
-          href="/admin/applications"
-          className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs"
-        >
-          Applications
-        </Link>
-        <Link
-          href="/admin/invoices"
-          className="rounded-full border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted sm:px-4 sm:text-xs"
-        >
-          Invoices
-        </Link>
-        <Link
-          href="/admin/dashboard"
-          data-testid="link-email-log-back"
-          className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-3 py-2 text-[11px] font-semibold text-primary"
-        >
-          <ArrowLeft size={13} />
-          Dashboard
-        </Link>
-      </nav>
+      <ResponsiveNav label="Administrator navigation" items={[
+        { href: "/admin/campaigns", label: "Campaigns" },
+        { href: "/admin/applications", label: "Applications" },
+        { href: "/admin/invoices", label: "Invoices" },
+        { href: "/admin/dashboard", label: "Dashboard", testId: "link-email-log-back" },
+      ]} current={{ label: "Email log" }} />
     </header>
   );
 }

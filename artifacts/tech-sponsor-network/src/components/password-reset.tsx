@@ -19,6 +19,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
+function safeErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = String(error.message);
+    if (message.length < 240 && !/(\bat\s.+:\d+:\d+|stack|exception|fetch failed|failed to fetch|network error|request failed|status code|http \d{3}|econn|timeout|<!doctype|<html)/i.test(message)) return message;
+  }
+  return fallback;
+}
+
 function AuthPageFrame({
   children,
   kicker,
@@ -189,8 +197,7 @@ export function ForgotPasswordPage() {
           )}
           {requestReset.isError && (
             <FormNotice kind="error">
-              {requestReset.error.message ||
-                "Could not request a password reset. Please try again."}
+              {safeErrorMessage(requestReset.error, "Could not request a password reset. Please try again.")}
             </FormNotice>
           )}
           <Button
@@ -341,8 +348,7 @@ export function ResetPasswordPage() {
             />
             {resetPassword.isError && (
               <FormNotice kind="error">
-                {resetPassword.error.message ||
-                  "This password reset link is invalid or expired."}
+                {safeErrorMessage(resetPassword.error, "This password reset link is invalid or expired.")}
               </FormNotice>
             )}
             <Button
