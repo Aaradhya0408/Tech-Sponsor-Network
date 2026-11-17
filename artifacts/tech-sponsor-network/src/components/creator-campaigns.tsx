@@ -22,6 +22,7 @@ import type { AdminCampaign, CreatorProfile, CampaignApplicationInput } from '@w
 import { COUNTRY_OPTIONS } from '@/lib/countries';
 import { Form } from '@/components/ui/form';
 import { ResponsiveNav } from '@/components/responsive-nav';
+import { CreatorProjectLifecycle } from '@/components/project-submissions';
 
 function messageOf(error: unknown) {
   if (error && typeof error === 'object' && 'message' in error) {
@@ -58,7 +59,23 @@ function rejectionReasonLabel(reason?: string | null) {
 }
 
 function applicationStatusLabel(status: string) {
+  if (status === 'UNDER_REVIEW') return 'Applied';
+  if (status === 'NOT_SELECTED') return 'Rejected';
+  if (status === 'IN_PROGRESS') return 'In progress';
+  if (status === 'SUBMITTED') return 'Submitted';
+  if (status === 'SUBMISSION_ACCEPTED') return 'Submission accepted';
+  if (status === 'SUBMISSION_REJECTED') return 'Submission rejected';
   return status.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function applicationStatusTone(status: string) {
+  if (status === 'UNDER_REVIEW' || status === 'IN_PROGRESS' || status === 'SUBMITTED') {
+    return 'border-[#e2d2b8] bg-[#f4eddf] text-[#785f44]';
+  }
+  if (status === 'NOT_SELECTED' || status === 'SUBMISSION_REJECTED') {
+    return 'border-[#e5c2bb] bg-[#f7e9e6] text-[#8f463d]';
+  }
+  return 'border-[#bed1c1] bg-[#e7efe6] text-[#315848]';
 }
 
 function eligibility(campaign: AdminCampaign, profile: CreatorProfile) {
@@ -260,7 +277,8 @@ export function CreatorCampaignDetail() {
           </div>
           <aside className="space-y-4 lg:sticky lg:top-6">
              <section className="rounded-[22px] border border-border/80 bg-card p-5 sm:p-6" data-testid={`panel-campaign-eligibility-${campaign.id}`}><div className="eyebrow text-primary">Profile fit</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">Your eligibility</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">Based on the creator profile currently on file.</p><div className="mt-5"><EligibilityPanel campaign={campaign} profile={profile} /></div></section>
-              {applicationsQuery.isLoading ? <div data-testid={`loading-campaign-application-${campaign.id}`} className="h-24 animate-pulse rounded-[22px] bg-muted" /> : application ? <div data-testid={`status-applied-detail-${campaign.id}`} className={`flex items-start gap-3 rounded-[22px] border p-5 ${application.status === 'NOT_SELECTED' ? 'border-[#e5c2bb] bg-[#f7e9e6] text-[#8f463d]' : application.status === 'UNDER_REVIEW' ? 'border-[#e2d2b8] bg-[#f4eddf] text-[#785f44]' : 'border-[#bed1c1] bg-[#e7efe6] text-[#315848]'}`}><CircleCheck size={20} className="mt-0.5 shrink-0" /><div className="min-w-0"><p data-testid={`status-campaign-application-${campaign.id}`} className="text-sm font-semibold">{applicationStatusLabel(application.status)}</p><p className="mt-1 text-xs leading-5">{application.status === 'UNDER_REVIEW' ? `Your application for ${campaign.title} is under review. We will email you when there is an update.` : application.status === 'NOT_SELECTED' ? 'Thank you for putting yourself forward. The decision details are below.' : `Your application for ${campaign.title} has been reviewed.`}</p>{application.status === 'NOT_SELECTED' && <div data-testid={`panel-campaign-rejection-${campaign.id}`} className="mt-4 rounded-xl border border-[#e5c2bb] bg-card/70 p-4"><p className="eyebrow text-[#8f463d]">Decision details</p><p data-testid={`text-campaign-rejection-reason-${campaign.id}`} className="mt-2 text-sm font-semibold">{rejectionReasonLabel(application.rejectionReason) || 'Reason not provided'}</p>{application.decisionNote && <p data-testid={`text-campaign-decision-note-${campaign.id}`} className="mt-2 whitespace-pre-wrap text-sm leading-6">{application.decisionNote}</p>}</div>}</div></div> : applicationsQuery.isError ? <div role="alert" data-testid={`status-campaign-application-check-error-${campaign.id}`} className="rounded-[22px] border border-[#e3c2bb] bg-card p-4 text-xs leading-5 text-[#8f463d]"><p>We couldn’t confirm your application status.</p><button type="button" onClick={() => applicationsQuery.refetch()} data-testid={`button-retry-application-status-${campaign.id}`} className="mt-2 font-semibold underline underline-offset-2">Try again</button></div> : eligible && <ApplicationForm campaignId={campaign.id} campaignTitle={campaign.title} />}
+              {applicationsQuery.isLoading ? <div data-testid={`loading-campaign-application-${campaign.id}`} className="h-24 animate-pulse rounded-[22px] bg-muted" /> : application ? <div data-testid={`status-applied-detail-${campaign.id}`} className={`flex items-start gap-3 rounded-[22px] border p-5 ${applicationStatusTone(application.status)}`}><CircleCheck size={20} className="mt-0.5 shrink-0" /><div className="min-w-0"><p data-testid={`status-campaign-application-${campaign.id}`} className="text-sm font-semibold">{applicationStatusLabel(application.status)}</p><p className="mt-1 text-xs leading-5">{application.status === 'UNDER_REVIEW' ? `Your application for ${campaign.title} is under review. We will email you when there is an update.` : application.status === 'NOT_SELECTED' ? 'Thank you for putting yourself forward. The decision details are below.' : `Your application for ${campaign.title} has been reviewed.`}</p>{application.status === 'NOT_SELECTED' && <div data-testid={`panel-campaign-rejection-${campaign.id}`} className="mt-4 rounded-xl border border-[#e5c2bb] bg-card/70 p-4"><p className="eyebrow text-[#8f463d]">Decision details</p><p data-testid={`text-campaign-rejection-reason-${campaign.id}`} className="mt-2 text-sm font-semibold">{rejectionReasonLabel(application.rejectionReason) || 'Reason not provided'}</p>{application.decisionNote && <p data-testid={`text-campaign-decision-note-${campaign.id}`} className="mt-2 whitespace-pre-wrap text-sm leading-6">{application.decisionNote}</p>}</div>}</div></div> : applicationsQuery.isError ? <div role="alert" data-testid={`status-campaign-application-check-error-${campaign.id}`} className="rounded-[22px] border border-[#e3c2bb] bg-card p-4 text-xs leading-5 text-[#8f463d]"><p>We couldn’t confirm your application status.</p><button type="button" onClick={() => applicationsQuery.refetch()} data-testid={`button-retry-application-status-${campaign.id}`} className="mt-2 font-semibold underline underline-offset-2">Try again</button></div> : eligible && <ApplicationForm campaignId={campaign.id} campaignTitle={campaign.title} />}
+              {application && <CreatorProjectLifecycle application={application} />}
             <section className="rounded-[22px] border border-border/80 bg-card p-5 sm:p-6"><div className="eyebrow text-muted-foreground">Niches</div><div className="mt-3 flex flex-wrap gap-2">{campaign.niches.map(item => <span key={item} className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground">{item}</span>)}</div><div className="mt-5 border-t border-border pt-4"><p className="eyebrow text-muted-foreground">Audience requirement</p><p className="mt-1 text-sm font-semibold">{new Intl.NumberFormat('en').format(campaign.minimumFollowers)} followers minimum</p><p className="mt-1 text-xs leading-5 text-muted-foreground">On at least one linked {campaign.acceptedPlatforms.join(' or ')} profile.</p></div></section>
           </aside>
         </div>

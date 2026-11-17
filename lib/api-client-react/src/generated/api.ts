@@ -23,6 +23,8 @@ import type {
   AdminCampaign,
   AdminCampaignApplicationList,
   AdminCampaignList,
+  AdminCampaignSubmission,
+  AdminCampaignSubmissionList,
   AdminCreatorProfiles,
   AdminEmailLog,
   AdminInvoice,
@@ -44,6 +46,7 @@ import type {
   CreatorPlatformVerificationInput,
   CreatorProfile,
   CreatorProfileInput,
+  CreatorProjectSubmission,
   ErrorResponse,
   HealthStatus,
   InvoiceInput,
@@ -51,12 +54,18 @@ import type {
   InvoiceTerms,
   InvoiceUploadInput,
   InvoiceUploadResult,
+  ListAdminCampaignSubmissionsParams,
   LoginInput,
   PasswordResetInput,
   PasswordResetRequestInput,
   PasswordResetRequestResult,
+  ProjectSubmissionDecisionInput,
+  ProjectSubmissionInput,
   SignUpInput,
   SignUpResult,
+  StartCampaignProjectResult,
+  SubmissionUploadInput,
+  SubmissionUploadResult,
   UnsubscribeFromCampaignAlertsParams,
   VerifyEmailInput
 } from './api.schemas';
@@ -1744,6 +1753,585 @@ export const useCreateCreatorCampaignApplication = <TError = ErrorType<ErrorResp
       return useMutation(getCreateCreatorCampaignApplicationMutationOptions(options));
     }
 
+export const getStartCreatorCampaignProjectUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/creator/applications/${applicationId}/start`
+}
+
+/**
+ * @summary Start a project for an accepted campaign application
+ */
+export const startCreatorCampaignProject = async (applicationId: string, options?: Parameters<typeof customFetch>[1]): Promise<StartCampaignProjectResult> => {
+
+  return customFetch<StartCampaignProjectResult>(getStartCreatorCampaignProjectUrl(applicationId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getStartCreatorCampaignProjectMutationKey = () => ['startCreatorCampaignProject'] as const;
+
+export const getStartCreatorCampaignProjectMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startCreatorCampaignProject>>, TError,StartCreatorCampaignProjectMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startCreatorCampaignProject>>, TError,StartCreatorCampaignProjectMutationVariables, TContext> => {
+
+const mutationKey = getStartCreatorCampaignProjectMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startCreatorCampaignProject>>, StartCreatorCampaignProjectMutationVariables> = (props) => {
+          const {applicationId} = props ?? {};
+
+          return  startCreatorCampaignProject(applicationId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartCreatorCampaignProjectMutationResult = NonNullable<Awaited<ReturnType<typeof startCreatorCampaignProject>>>
+
+    export type StartCreatorCampaignProjectMutationError = ErrorType<ErrorResponse>
+    export type StartCreatorCampaignProjectMutationVariables = {applicationId: string}
+
+    /**
+ * @summary Start a project for an accepted campaign application
+ */
+export const useStartCreatorCampaignProject = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startCreatorCampaignProject>>, TError,StartCreatorCampaignProjectMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startCreatorCampaignProject>>,
+        TError,
+        StartCreatorCampaignProjectMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStartCreatorCampaignProjectMutationOptions(options));
+    }
+
+export const getRequestCreatorSubmissionUploadUrlUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/creator/applications/${applicationId}/submission-upload-url`
+}
+
+/**
+ * @summary Request a private upload URL for a submission cover
+ */
+export const requestCreatorSubmissionUploadUrl = async (applicationId: string,
+    submissionUploadInput: SubmissionUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<SubmissionUploadResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SubmissionUploadResult>(getRequestCreatorSubmissionUploadUrlUrl(applicationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(submissionUploadInput)
+  }
+);}
+
+
+
+
+
+export const getRequestCreatorSubmissionUploadUrlMutationKey = () => ['requestCreatorSubmissionUploadUrl'] as const;
+
+export const getRequestCreatorSubmissionUploadUrlMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestCreatorSubmissionUploadUrl>>, TError,RequestCreatorSubmissionUploadUrlMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestCreatorSubmissionUploadUrl>>, TError,RequestCreatorSubmissionUploadUrlMutationVariables, TContext> => {
+
+const mutationKey = getRequestCreatorSubmissionUploadUrlMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestCreatorSubmissionUploadUrl>>, RequestCreatorSubmissionUploadUrlMutationVariables> = (props) => {
+          const {applicationId,data} = props ?? {};
+
+          return  requestCreatorSubmissionUploadUrl(applicationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestCreatorSubmissionUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestCreatorSubmissionUploadUrl>>>
+    export type RequestCreatorSubmissionUploadUrlMutationBody = BodyType<SubmissionUploadInput>
+    export type RequestCreatorSubmissionUploadUrlMutationError = ErrorType<ErrorResponse>
+    export type RequestCreatorSubmissionUploadUrlMutationVariables = {applicationId: string;data: BodyType<SubmissionUploadInput>}
+
+    /**
+ * @summary Request a private upload URL for a submission cover
+ */
+export const useRequestCreatorSubmissionUploadUrl = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestCreatorSubmissionUploadUrl>>, TError,RequestCreatorSubmissionUploadUrlMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestCreatorSubmissionUploadUrl>>,
+        TError,
+        RequestCreatorSubmissionUploadUrlMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestCreatorSubmissionUploadUrlMutationOptions(options));
+    }
+
+export const getCreateCreatorCampaignSubmissionUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/creator/applications/${applicationId}/submission`
+}
+
+/**
+ * @summary Submit or resubmit project work
+ */
+export const createCreatorCampaignSubmission = async (applicationId: string,
+    projectSubmissionInput: ProjectSubmissionInput, options?: Parameters<typeof customFetch>[1]): Promise<CreatorProjectSubmission> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CreatorProjectSubmission>(getCreateCreatorCampaignSubmissionUrl(applicationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(projectSubmissionInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCreatorCampaignSubmissionMutationKey = () => ['createCreatorCampaignSubmission'] as const;
+
+export const getCreateCreatorCampaignSubmissionMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreatorCampaignSubmission>>, TError,CreateCreatorCampaignSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCreatorCampaignSubmission>>, TError,CreateCreatorCampaignSubmissionMutationVariables, TContext> => {
+
+const mutationKey = getCreateCreatorCampaignSubmissionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCreatorCampaignSubmission>>, CreateCreatorCampaignSubmissionMutationVariables> = (props) => {
+          const {applicationId,data} = props ?? {};
+
+          return  createCreatorCampaignSubmission(applicationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCreatorCampaignSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof createCreatorCampaignSubmission>>>
+    export type CreateCreatorCampaignSubmissionMutationBody = BodyType<ProjectSubmissionInput>
+    export type CreateCreatorCampaignSubmissionMutationError = ErrorType<ErrorResponse>
+    export type CreateCreatorCampaignSubmissionMutationVariables = {applicationId: string;data: BodyType<ProjectSubmissionInput>}
+
+    /**
+ * @summary Submit or resubmit project work
+ */
+export const useCreateCreatorCampaignSubmission = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreatorCampaignSubmission>>, TError,CreateCreatorCampaignSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCreatorCampaignSubmission>>,
+        TError,
+        CreateCreatorCampaignSubmissionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCreatorCampaignSubmissionMutationOptions(options));
+    }
+
+export const getGetCreatorSubmissionCoverUrl = (submissionId: string,) => {
+
+
+
+
+  return `/api/creator/submissions/${submissionId}/cover`
+}
+
+/**
+ * @summary Open the signed-in creator's private submission cover
+ */
+export const getCreatorSubmissionCover = async (submissionId: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetCreatorSubmissionCoverUrl(submissionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCreatorSubmissionCoverQueryKey = (submissionId: string,) => {
+    return [
+    `/api/creator/submissions/${submissionId}/cover`
+    ] as const;
+    }
+
+
+export const getGetCreatorSubmissionCoverQueryOptions = <TData = Awaited<ReturnType<typeof getCreatorSubmissionCover>>, TError = ErrorType<ErrorResponse>>(submissionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreatorSubmissionCover>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCreatorSubmissionCoverQueryKey(submissionId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCreatorSubmissionCover>>> = ({ signal }) => getCreatorSubmissionCover(submissionId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: submissionId !== null && submissionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCreatorSubmissionCover>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCreatorSubmissionCoverQueryResult = NonNullable<Awaited<ReturnType<typeof getCreatorSubmissionCover>>>
+export type GetCreatorSubmissionCoverQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Open the signed-in creator's private submission cover
+ */
+
+export function useGetCreatorSubmissionCover<TData = Awaited<ReturnType<typeof getCreatorSubmissionCover>>, TError = ErrorType<ErrorResponse>>(
+ submissionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCreatorSubmissionCover>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCreatorSubmissionCoverQueryOptions(submissionId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAdminCampaignSubmissionsUrl = (params?: ListAdminCampaignSubmissionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/submissions?${stringifiedParams}` : `/api/admin/submissions`
+}
+
+/**
+ * @summary List campaign project submissions for administrators
+ */
+export const listAdminCampaignSubmissions = async (params?: ListAdminCampaignSubmissionsParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignSubmissionList> => {
+
+  return customFetch<AdminCampaignSubmissionList>(getListAdminCampaignSubmissionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminCampaignSubmissionsQueryKey = (params?: ListAdminCampaignSubmissionsParams,) => {
+    return [
+    `/api/admin/submissions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminCampaignSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCampaignSubmissions>>, TError = ErrorType<ErrorResponse>>(params?: ListAdminCampaignSubmissionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaignSubmissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminCampaignSubmissionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCampaignSubmissions>>> = ({ signal }) => listAdminCampaignSubmissions(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaignSubmissions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminCampaignSubmissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminCampaignSubmissions>>>
+export type ListAdminCampaignSubmissionsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List campaign project submissions for administrators
+ */
+
+export function useListAdminCampaignSubmissions<TData = Awaited<ReturnType<typeof listAdminCampaignSubmissions>>, TError = ErrorType<ErrorResponse>>(
+ params?: ListAdminCampaignSubmissionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaignSubmissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminCampaignSubmissionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAdminCampaignSubmissionDecisionUrl = (submissionId: string,) => {
+
+
+
+
+  return `/api/admin/submissions/${submissionId}/decision`
+}
+
+/**
+ * @summary Accept or reject a project submission
+ */
+export const updateAdminCampaignSubmissionDecision = async (submissionId: string,
+    projectSubmissionDecisionInput: ProjectSubmissionDecisionInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignSubmission> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminCampaignSubmission>(getUpdateAdminCampaignSubmissionDecisionUrl(submissionId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(projectSubmissionDecisionInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminCampaignSubmissionDecisionMutationKey = () => ['updateAdminCampaignSubmissionDecision'] as const;
+
+export const getUpdateAdminCampaignSubmissionDecisionMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaignSubmissionDecision>>, TError,UpdateAdminCampaignSubmissionDecisionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaignSubmissionDecision>>, TError,UpdateAdminCampaignSubmissionDecisionMutationVariables, TContext> => {
+
+const mutationKey = getUpdateAdminCampaignSubmissionDecisionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminCampaignSubmissionDecision>>, UpdateAdminCampaignSubmissionDecisionMutationVariables> = (props) => {
+          const {submissionId,data} = props ?? {};
+
+          return  updateAdminCampaignSubmissionDecision(submissionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminCampaignSubmissionDecisionMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminCampaignSubmissionDecision>>>
+    export type UpdateAdminCampaignSubmissionDecisionMutationBody = BodyType<ProjectSubmissionDecisionInput>
+    export type UpdateAdminCampaignSubmissionDecisionMutationError = ErrorType<ErrorResponse>
+    export type UpdateAdminCampaignSubmissionDecisionMutationVariables = {submissionId: string;data: BodyType<ProjectSubmissionDecisionInput>}
+
+    /**
+ * @summary Accept or reject a project submission
+ */
+export const useUpdateAdminCampaignSubmissionDecision = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminCampaignSubmissionDecision>>, TError,UpdateAdminCampaignSubmissionDecisionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminCampaignSubmissionDecision>>,
+        TError,
+        UpdateAdminCampaignSubmissionDecisionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateAdminCampaignSubmissionDecisionMutationOptions(options));
+    }
+
+export const getGetAdminSubmissionCoverUrl = (submissionId: string,) => {
+
+
+
+
+  return `/api/admin/submissions/${submissionId}/cover`
+}
+
+/**
+ * @summary Open a private campaign submission cover
+ */
+export const getAdminSubmissionCover = async (submissionId: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetAdminSubmissionCoverUrl(submissionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminSubmissionCoverQueryKey = (submissionId: string,) => {
+    return [
+    `/api/admin/submissions/${submissionId}/cover`
+    ] as const;
+    }
+
+
+export const getGetAdminSubmissionCoverQueryOptions = <TData = Awaited<ReturnType<typeof getAdminSubmissionCover>>, TError = ErrorType<ErrorResponse>>(submissionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminSubmissionCover>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminSubmissionCoverQueryKey(submissionId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminSubmissionCover>>> = ({ signal }) => getAdminSubmissionCover(submissionId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: submissionId !== null && submissionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminSubmissionCover>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminSubmissionCoverQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminSubmissionCover>>>
+export type GetAdminSubmissionCoverQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Open a private campaign submission cover
+ */
+
+export function useGetAdminSubmissionCover<TData = Awaited<ReturnType<typeof getAdminSubmissionCover>>, TError = ErrorType<ErrorResponse>>(
+ submissionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminSubmissionCover>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminSubmissionCoverQueryOptions(submissionId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListAdminCampaignApplicationsUrl = () => {
 
 
@@ -2264,7 +2852,7 @@ export const getRequestInvoiceUploadUrlUrl = (applicationId: string,) => {
 }
 
 /**
- * @summary Request a private invoice or work-photo upload URL
+ * @summary Request a private invoice or optional work-photo upload URL
  */
 export const requestInvoiceUploadUrl = async (applicationId: string,
     invoiceUploadInput: InvoiceUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<InvoiceUploadResult> => {
@@ -2331,7 +2919,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RequestInvoiceUploadUrlMutationVariables = {applicationId: string;data: BodyType<InvoiceUploadInput>}
 
     /**
- * @summary Request a private invoice or work-photo upload URL
+ * @summary Request a private invoice or optional work-photo upload URL
  */
 export const useRequestInvoiceUploadUrl = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestInvoiceUploadUrl>>, TError,RequestInvoiceUploadUrlMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -2353,7 +2941,7 @@ export const getGetCreatorInvoiceTermsUrl = (applicationId: string,) => {
 }
 
 /**
- * @summary Get campaign reward terms for an eligible invoice
+ * @summary Get campaign reward terms after project submission acceptance
  */
 export const getCreatorInvoiceTerms = async (applicationId: string, options?: Parameters<typeof customFetch>[1]): Promise<InvoiceTerms> => {
 
@@ -2400,7 +2988,7 @@ export type GetCreatorInvoiceTermsQueryError = ErrorType<ErrorResponse>
 
 
 /**
- * @summary Get campaign reward terms for an eligible invoice
+ * @summary Get campaign reward terms after project submission acceptance
  */
 
 export function useGetCreatorInvoiceTerms<TData = Awaited<ReturnType<typeof getCreatorInvoiceTerms>>, TError = ErrorType<ErrorResponse>>(
@@ -2430,7 +3018,7 @@ export const getCreateCreatorInvoiceUrl = (applicationId: string,) => {
 }
 
 /**
- * @summary Submit one invoice for an accepted or winning application
+ * @summary Submit one invoice after the project submission is accepted
  */
 export const createCreatorInvoice = async (applicationId: string,
     invoiceInput: InvoiceInput, options?: Parameters<typeof customFetch>[1]): Promise<CreatorInvoice> => {
@@ -2497,7 +3085,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateCreatorInvoiceMutationVariables = {applicationId: string;data: BodyType<InvoiceInput>}
 
     /**
- * @summary Submit one invoice for an accepted or winning application
+ * @summary Submit one invoice after the project submission is accepted
  */
 export const useCreateCreatorInvoice = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCreatorInvoice>>, TError,CreateCreatorInvoiceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

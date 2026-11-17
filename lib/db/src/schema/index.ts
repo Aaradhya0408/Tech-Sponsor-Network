@@ -22,5 +22,6 @@ export * from "./creator-profiles";
 export * from "./campaigns";
 export * from "./campaign-applications";
 export * from "./campaign-application-decisions";
+export * from "./campaign-submissions";
 export * from "./invoices";
 export * from "./email-log";

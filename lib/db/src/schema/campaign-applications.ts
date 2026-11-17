@@ -18,6 +18,10 @@ export const CAMPAIGN_APPLICATION_STATUSES = [
   "UNDER_REVIEW",
   "ACCEPTED",
   "NOT_SELECTED",
+  "IN_PROGRESS",
+  "SUBMITTED",
+  "SUBMISSION_ACCEPTED",
+  "SUBMISSION_REJECTED",
   "WINNER",
   "PAID",
 ] as const;
@@ -58,6 +62,7 @@ export const campaignApplicationsTable = pgTable(
       onDelete: "restrict",
     }),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
+    startedAt: timestamp("started_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

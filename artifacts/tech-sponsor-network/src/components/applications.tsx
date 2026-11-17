@@ -17,6 +17,7 @@ import {
 import type { AdminCampaignApplication, CampaignApplicationDecisionInput, CampaignApplicationStatus } from '@workspace/api-client-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { CreatorInvoiceSection } from '@/components/invoices';
+import { CreatorProjectLifecycle } from '@/components/project-submissions';
 import { ResponsiveNav } from '@/components/responsive-nav';
 
 const REJECTION_REASONS = [
@@ -62,6 +63,12 @@ function appliedDate(value: string, withTime = false) {
 }
 
 function statusLabel(status: CampaignApplicationStatus) {
+  if (status === 'UNDER_REVIEW') return 'Applied';
+  if (status === 'NOT_SELECTED') return 'Rejected';
+  if (status === 'IN_PROGRESS') return 'In progress';
+  if (status === 'SUBMITTED') return 'Submitted';
+  if (status === 'SUBMISSION_ACCEPTED') return 'Submission accepted';
+  if (status === 'SUBMISSION_REJECTED') return 'Submission rejected';
   return status.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, letter => letter.toUpperCase());
 }
 
@@ -70,9 +77,9 @@ function reasonLabel(reason?: string | null) {
 }
 
 function StatusBadge({ status, testId }: { status: CampaignApplicationStatus; testId?: string }) {
-  const underReview = status === 'UNDER_REVIEW';
-  const positive = status === 'ACCEPTED' || status === 'WINNER' || status === 'PAID';
-  return <span data-testid={testId ?? `status-application-${status.toLowerCase()}`} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.08em] ${underReview ? 'bg-[#f4eddf] text-[#785f44]' : positive ? 'bg-[#e7efe6] text-[#315848]' : 'bg-[#f7e9e6] text-[#8f463d]'}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(status)}</span>;
+  const amber = status === 'UNDER_REVIEW' || status === 'IN_PROGRESS' || status === 'SUBMITTED';
+  const positive = status === 'ACCEPTED' || status === 'SUBMISSION_ACCEPTED' || status === 'WINNER' || status === 'PAID';
+  return <span data-testid={testId ?? `status-application-${status.toLowerCase()}`} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.08em] ${amber ? 'bg-[#f4eddf] text-[#785f44]' : positive ? 'bg-[#e7efe6] text-[#315848]' : 'bg-[#f7e9e6] text-[#8f463d]'}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(status)}</span>;
 }
 
 function ApplicationsHeader({ admin = false }: { admin?: boolean }) {
@@ -81,6 +88,7 @@ function ApplicationsHeader({ admin = false }: { admin?: boolean }) {
     <ResponsiveNav label={admin ? 'Administrator navigation' : 'Creator navigation'} items={admin ? [
       { href: '/admin/campaigns', label: 'Campaigns', testId: 'link-applications-back' },
       { href: '/admin/invoices', label: 'Invoices' },
+      { href: '/admin/submissions', label: 'Submissions' },
       { href: '/admin/email-log', label: 'Email log' },
       { href: '/admin/dashboard', label: 'Dashboard' },
     ] : [
@@ -120,7 +128,7 @@ export function CreatorApplicationsPage() {
       </div>
       {applicationsQuery.isLoading ? <ApplicationsSkeleton /> : applicationsQuery.isError ? <div role="alert" data-testid="status-creator-applications-error" className="mt-8 rounded-[22px] border border-[#e3c2bb] bg-card p-6"><p className="text-sm font-semibold text-[#8f463d]">Your applications couldn’t be loaded.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{errorMessage(applicationsQuery.error)}</p><button type="button" onClick={() => applicationsQuery.refetch()} data-testid="button-retry-creator-applications" className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Try again</button></div>
         : applications.length === 0 ? <div data-testid="empty-creator-applications" className="mt-8 rounded-[24px] border border-dashed border-border bg-card/70 px-6 py-14 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><BriefcaseBusiness size={20} /></div><div className="eyebrow mt-5 text-primary">Nothing submitted yet</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">Your next opportunity starts here.</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">When you apply to a campaign, you’ll find its status and submission details here.</p><Link href="/campaigns" data-testid="link-discover-from-applications" className="mt-5 inline-flex rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground">Explore campaigns</Link></div>
-          : <div className="mt-7 space-y-3" data-testid="list-creator-applications">{applications.map(application => <article key={application.id} data-testid={`card-creator-application-${application.id}`} className="rounded-[20px] border border-border/80 bg-card p-4 sm:p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><div className="eyebrow text-primary">Campaign application</div><h2 className="serif mt-2 text-xl font-semibold leading-tight tracking-[-.04em]" data-testid={`text-application-campaign-${application.id}`}>{application.campaignTitle}</h2><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground"><span data-testid={`text-application-applied-date-${application.id}`} className="inline-flex items-center gap-1.5"><CalendarDays size={13} className="text-primary" />Applied {appliedDate(application.appliedAt)}</span><span className="inline-flex items-center gap-1.5"><Clock3 size={13} className="text-primary" />Payment rule acknowledged</span></div></div><StatusBadge status={application.status} testId={`status-creator-application-${application.id}`} /></div><p data-testid={`text-application-message-${application.id}`} className="mt-4 whitespace-pre-wrap border-t border-border pt-4 text-sm leading-6 text-foreground/80">{application.personalMessage}</p>{application.status === 'NOT_SELECTED' && <div data-testid={`panel-application-decision-${application.id}`} className="mt-4 rounded-xl border border-[#e5cfc4] bg-[#f7eee8] p-4"><p className="eyebrow text-[#8b573d]">Decision details</p><p data-testid={`text-application-rejection-reason-${application.id}`} className="mt-2 text-sm font-semibold text-[#704832]">{reasonLabel(application.rejectionReason) || 'Reason not provided'}</p>{application.decisionNote && <p data-testid={`text-application-decision-note-${application.id}`} className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#704832]">{application.decisionNote}</p>}</div>}</article>)}</div>}
+          : <div className="mt-7 space-y-3" data-testid="list-creator-applications">{applications.map(application => <article key={application.id} data-testid={`card-creator-application-${application.id}`} className="rounded-[20px] border border-border/80 bg-card p-4 sm:p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><div className="eyebrow text-primary">Campaign application</div><h2 className="serif mt-2 text-xl font-semibold leading-tight tracking-[-.04em]" data-testid={`text-application-campaign-${application.id}`}>{application.campaignTitle}</h2><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground"><span data-testid={`text-application-applied-date-${application.id}`} className="inline-flex items-center gap-1.5"><CalendarDays size={13} className="text-primary" />Applied {appliedDate(application.appliedAt)}</span><span className="inline-flex items-center gap-1.5"><Clock3 size={13} className="text-primary" />Payment rule acknowledged</span></div></div><StatusBadge status={application.status} testId={`status-creator-application-${application.id}`} /></div><p data-testid={`text-application-message-${application.id}`} className="mt-4 whitespace-pre-wrap border-t border-border pt-4 text-sm leading-6 text-foreground/80">{application.personalMessage}</p>{application.status === 'NOT_SELECTED' && <div data-testid={`panel-application-decision-${application.id}`} className="mt-4 rounded-xl border border-[#e5cfc4] bg-[#f7eee8] p-4"><p className="eyebrow text-[#8b573d]">Decision details</p><p data-testid={`text-application-rejection-reason-${application.id}`} className="mt-2 text-sm font-semibold text-[#704832]">{reasonLabel(application.rejectionReason) || 'Reason not provided'}</p>{application.decisionNote && <p data-testid={`text-application-decision-note-${application.id}`} className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#704832]">{application.decisionNote}</p>}</div>}<CreatorProjectLifecycle application={application} /></article>)}</div>}
       <CreatorInvoiceSection applications={applications} email={current.data.email} accountName={current.data.name} />
       </section>
     <footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">Tech Sponsor Network <span className="px-2">·</span> Your applications</footer>
@@ -228,10 +236,10 @@ function ApplicationReviewCard({ application }: { application: AdminCampaignAppl
     {application.status === 'UNDER_REVIEW' ? <div className="mt-4 flex flex-col gap-2 sm:flex-row">
       <button type="button" disabled={decision.isPending} onClick={() => setMode('accept')} data-testid={`button-accept-application-${application.id}`} className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition hover:brightness-95 disabled:opacity-50"><CircleCheck size={14} />Accept</button>
       <button type="button" disabled={decision.isPending} onClick={() => setMode('reject')} data-testid={`button-reject-application-${application.id}`} className="inline-flex items-center justify-center gap-2 rounded-full border border-[#c99783] px-4 py-2.5 text-xs font-semibold text-[#8b573d] transition hover:bg-[#f7eee8] disabled:opacity-50">Reject</button>
-    </div> : <div className="mt-4 flex flex-wrap gap-2">
-      {application.status === 'ACCEPTED' && <button type="button" disabled={decision.isPending} onClick={() => setMode('winner')} data-testid={`button-mark-winner-${application.id}`} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#e7efe6] px-4 py-2.5 text-xs font-semibold text-[#315848] transition hover:bg-[#dce8dc] disabled:opacity-50"><CircleCheck size={14} />Mark winner</button>}
-      <button type="button" disabled={decision.isPending} onClick={() => setMode('change')} data-testid={`button-change-decision-${application.id}`} className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-4 py-2.5 text-xs font-semibold text-foreground transition hover:bg-muted disabled:opacity-50">Change decision</button>
-    </div>}
+    </div> : ['ACCEPTED', 'NOT_SELECTED', 'SUBMISSION_ACCEPTED', 'WINNER'].includes(application.status) ? <div className="mt-4 flex flex-wrap gap-2">
+      {(application.status as string) === 'SUBMISSION_ACCEPTED' && <button type="button" disabled={decision.isPending} onClick={() => setMode('winner')} data-testid={`button-mark-winner-${application.id}`} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#e7efe6] px-4 py-2.5 text-xs font-semibold text-[#315848] transition hover:bg-[#dce8dc] disabled:opacity-50"><CircleCheck size={14} />Mark winner</button>}
+      {['ACCEPTED', 'NOT_SELECTED', 'WINNER'].includes(application.status) && <button type="button" disabled={decision.isPending} onClick={() => setMode('change')} data-testid={`button-change-decision-${application.id}`} className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-4 py-2.5 text-xs font-semibold text-foreground transition hover:bg-muted disabled:opacity-50">Change decision</button>}
+    </div> : null}
     {mode && <DecisionForm application={application} mode={mode} pending={decision.isPending} showRetry={!!mutationError} onCancel={() => setMode(null)} onSubmit={decide} />}
   </article>;
 }

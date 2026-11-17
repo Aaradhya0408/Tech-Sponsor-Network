@@ -7,11 +7,17 @@
  */
 import type { CampaignApplicationStatus } from './campaignApplicationStatus';
 import type { CreatorCampaignApplicationRejectionReason } from './creatorCampaignApplicationRejectionReason';
+import type { CreatorProjectSubmission } from './creatorProjectSubmission';
 
 export interface CreatorCampaignApplication {
   id: string;
   campaignId: string;
   campaignTitle: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  campaignDeadline: string;
+  /** @nullable */
+  startedAt: Date | null;
+  submission: CreatorProjectSubmission | null;
   personalMessage: string;
   paymentRuleAcknowledged: boolean;
   /** @nullable */

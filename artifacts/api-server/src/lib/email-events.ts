@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import {
   campaignApplicationsTable,
+  campaignSubmissionsTable,
   campaignsTable,
   creatorPlatformsTable,
   creatorProfilesTable,
@@ -122,6 +123,86 @@ export async function notifyApplicationDecision(
       paragraphs,
       buttonLabel: "Browse other campaigns",
       buttonUrl: appUrl("/campaigns"),
+    }),
+  });
+}
+
+export async function notifySubmissionReceived(
+  submissionId: string,
+  campaignTitle: string,
+): Promise<void> {
+  const [row] = await db
+    .select({
+      email: usersTable.email,
+      creatorName: usersTable.name,
+      title: campaignSubmissionsTable.title,
+    })
+    .from(campaignSubmissionsTable)
+    .innerJoin(usersTable, eq(campaignSubmissionsTable.creatorId, usersTable.id))
+    .where(eq(campaignSubmissionsTable.id, submissionId))
+    .limit(1);
+  if (!row) return;
+
+  await sendEmail({
+    to: row.email,
+    type: "SUBMISSION_RECEIVED",
+    subject: `Project submitted: ${campaignTitle}`,
+    html: renderTransactionalEmail({
+      title: "Your project is under review",
+      paragraphs: [
+        `Hello ${row.creatorName},`,
+        `Your project, ${row.title}, for ${campaignTitle} has been received and is now under review.`,
+        "Payment is made only if your submission is accepted. If your work is not accepted, no payment will be made.",
+      ],
+      buttonLabel: "View your applications",
+      buttonUrl: appUrl("/my-campaigns"),
+    }),
+  });
+}
+
+export async function notifySubmissionDecision(
+  submissionId: string,
+  status: "SUBMISSION_ACCEPTED" | "SUBMISSION_REJECTED",
+  rejectionReason: string | null,
+): Promise<void> {
+  const [row] = await db
+    .select({
+      email: usersTable.email,
+      creatorName: usersTable.name,
+      campaignTitle: campaignsTable.title,
+      projectTitle: campaignSubmissionsTable.title,
+    })
+    .from(campaignSubmissionsTable)
+    .innerJoin(usersTable, eq(campaignSubmissionsTable.creatorId, usersTable.id))
+    .innerJoin(
+      campaignApplicationsTable,
+      eq(campaignSubmissionsTable.applicationId, campaignApplicationsTable.id),
+    )
+    .innerJoin(
+      campaignsTable,
+      eq(campaignApplicationsTable.campaignId, campaignsTable.id),
+    )
+    .where(eq(campaignSubmissionsTable.id, submissionId))
+    .limit(1);
+  if (!row) return;
+
+  const accepted = status === "SUBMISSION_ACCEPTED";
+  await sendEmail({
+    to: row.email,
+    type: accepted ? "SUBMISSION_ACCEPTED" : "SUBMISSION_REJECTED",
+    subject: `${accepted ? "Project accepted" : "Project update"}: ${row.campaignTitle}`,
+    html: renderTransactionalEmail({
+      title: accepted ? "Your project was accepted" : "Your project needs another pass",
+      paragraphs: [
+        `Hello ${row.creatorName},`,
+        accepted
+          ? `Your project, ${row.projectTitle}, for ${row.campaignTitle} has been accepted. You can now view the next steps in My applications.`
+          : `Your project, ${row.projectTitle}, for ${row.campaignTitle} was not accepted yet.`,
+        ...(!accepted && rejectionReason ? [`Reason: ${rejectionReason}`] : []),
+        "Payment is made only if your submission is accepted. If your work is not accepted, no payment will be made.",
+      ],
+      buttonLabel: "View your applications",
+      buttonUrl: appUrl("/my-campaigns"),
     }),
   });
 }

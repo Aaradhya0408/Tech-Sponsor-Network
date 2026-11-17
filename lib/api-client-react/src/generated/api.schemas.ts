@@ -350,9 +350,131 @@ export const CampaignApplicationStatus = {
   UNDER_REVIEW: 'UNDER_REVIEW',
   ACCEPTED: 'ACCEPTED',
   NOT_SELECTED: 'NOT_SELECTED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  SUBMITTED: 'SUBMITTED',
+  SUBMISSION_ACCEPTED: 'SUBMISSION_ACCEPTED',
+  SUBMISSION_REJECTED: 'SUBMISSION_REJECTED',
   WINNER: 'WINNER',
   PAID: 'PAID',
 } as const;
+
+export type CampaignSubmissionStatus = typeof CampaignSubmissionStatus[keyof typeof CampaignSubmissionStatus];
+
+
+export const CampaignSubmissionStatus = {
+  SUBMITTED: 'SUBMITTED',
+  SUBMISSION_ACCEPTED: 'SUBMISSION_ACCEPTED',
+  SUBMISSION_REJECTED: 'SUBMISSION_REJECTED',
+} as const;
+
+export interface StartCampaignProjectResult {
+  applicationId: string;
+  status: CampaignApplicationStatus;
+  startedAt: string;
+}
+
+export type SubmissionUploadInputContentType = typeof SubmissionUploadInputContentType[keyof typeof SubmissionUploadInputContentType];
+
+
+export const SubmissionUploadInputContentType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+} as const;
+
+export interface SubmissionUploadInput {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  name: string;
+  /**
+     * @minimum 1
+     * @maximum 5242880
+     */
+  size: number;
+  contentType: SubmissionUploadInputContentType;
+}
+
+export interface SubmissionUploadResult {
+  uploadURL: string;
+  objectPath: string;
+}
+
+export interface ProjectSubmissionInput {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  title: string;
+  /** @maxLength 2048 */
+  projectUrl: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  description: string;
+  /**
+     * @maxLength 512
+     * @nullable
+     */
+  coverObjectPath?: string | null;
+}
+
+export type ProjectSubmissionDecisionInputStatus = typeof ProjectSubmissionDecisionInputStatus[keyof typeof ProjectSubmissionDecisionInputStatus];
+
+
+export const ProjectSubmissionDecisionInputStatus = {
+  SUBMISSION_ACCEPTED: 'SUBMISSION_ACCEPTED',
+  SUBMISSION_REJECTED: 'SUBMISSION_REJECTED',
+} as const;
+
+export interface ProjectSubmissionDecisionInput {
+  status: ProjectSubmissionDecisionInputStatus;
+  /** @maxLength 500 */
+  rejectionReason?: string;
+}
+
+export type CreatorProjectSubmissionAttempt = typeof CreatorProjectSubmissionAttempt[keyof typeof CreatorProjectSubmissionAttempt];
+
+
+export const CreatorProjectSubmissionAttempt = {
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+} as const;
+
+export interface CreatorProjectSubmission {
+  id: string;
+  applicationId: string;
+  attempt: CreatorProjectSubmissionAttempt;
+  title: string;
+  projectUrl: string;
+  description: string;
+  /** @nullable */
+  coverUrl: string | null;
+  status: CampaignSubmissionStatus;
+  /** @nullable */
+  rejectionReason: string | null;
+  submittedAt: string;
+  /** @nullable */
+  reviewedAt: string | null;
+  canResubmit: boolean;
+}
+
+export type AdminCampaignSubmission = CreatorProjectSubmission & ({
+  campaignId: string;
+  campaignTitle: string;
+  creatorName: string;
+  creatorCountry: string;
+  creatorNiche: CreatorNiche;
+  platforms: CreatorPlatformProfile[];
+  isCurrent: boolean;
+  /** @nullable */
+  reviewedByName: string | null;
+});
+
+export interface AdminCampaignSubmissionList {
+  submissions: AdminCampaignSubmission[];
+}
 
 export type CampaignApplicationRejectionReason = typeof CampaignApplicationRejectionReason[keyof typeof CampaignApplicationRejectionReason];
 
@@ -475,6 +597,11 @@ export interface CreatorCampaignApplication {
   id: string;
   campaignId: string;
   campaignTitle: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  campaignDeadline: string;
+  /** @nullable */
+  startedAt: string | null;
+  submission: CreatorProjectSubmission | null;
   personalMessage: string;
   paymentRuleAcknowledged: boolean;
   /** @nullable */
@@ -704,6 +831,11 @@ export interface AdminCampaignApplicationList {
 export interface ErrorResponse {
   error: string;
 }
+
+export type ListAdminCampaignSubmissionsParams = {
+campaignId?: string;
+status?: CampaignSubmissionStatus;
+};
 
 export type UnsubscribeFromCampaignAlertsParams = {
 userId: string;

@@ -227,8 +227,11 @@ router.patch(
       if (
         current.status === "PAID" ||
         current.status === status ||
-        (status === "WINNER" && current.status !== "ACCEPTED") ||
-        (current.status === "UNDER_REVIEW" && status === "WINNER")
+        (status === "WINNER" && current.status !== "SUBMISSION_ACCEPTED") ||
+        (status !== "WINNER" &&
+          !["UNDER_REVIEW", "ACCEPTED", "NOT_SELECTED", "WINNER"].includes(
+            current.status,
+          ))
       ) {
         return {
           ok: false as const,
@@ -236,7 +239,7 @@ router.patch(
             status: 409,
             message:
               status === "WINNER"
-                ? "Only an Accepted application can become a Winner."
+                ? "Only an accepted project submission can become a Winner."
                 : "This application cannot be moved from its current status.",
           },
         };

@@ -76,6 +76,30 @@ export async function createStagingUpload(
   };
 }
 
+export async function createSubmissionCoverStagingUpload(
+  creatorId: string,
+  applicationId: string,
+): Promise<{ uploadURL: string; objectPath: string }> {
+  const key = `submission-staging/${creatorId}/${applicationId}/${randomUUID()}`;
+  return {
+    uploadURL: await signPrivateObjectUrl(key, "PUT"),
+    objectPath: objectPathForKey(key),
+  };
+}
+
+export function isSubmissionCoverStagingPath(
+  objectPath: string,
+  creatorId: string,
+  applicationId: string,
+): boolean {
+  return (
+    new RegExp(
+      `^/objects/submission-staging/${creatorId}/${applicationId}/[a-f0-9-]{36}$`,
+    ).test(objectPath) &&
+    !objectPath.includes("..")
+  );
+}
+
 export function isCreatorStagingPath(
   objectPath: string,
   creatorId: string,

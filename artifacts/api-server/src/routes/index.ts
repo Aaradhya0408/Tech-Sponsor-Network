@@ -6,6 +6,8 @@ import adminCampaignsRouter from "./admin-campaigns";
 import creatorCampaignsRouter from "./creator-campaigns";
 import creatorApplicationsRouter from "./creator-applications";
 import adminApplicationsRouter from "./admin-applications";
+import creatorSubmissionsRouter from "./creator-submissions";
+import adminSubmissionsRouter from "./admin-submissions";
 import invoicesRouter from "./invoices";
 import adminEmailRouter from "./admin-email";
 
@@ -18,6 +20,8 @@ router.use(adminCampaignsRouter);
 router.use(creatorCampaignsRouter);
 router.use(creatorApplicationsRouter);
 router.use(adminApplicationsRouter);
+router.use(creatorSubmissionsRouter);
+router.use(adminSubmissionsRouter);
 router.use(invoicesRouter);
 router.use(adminEmailRouter);
 

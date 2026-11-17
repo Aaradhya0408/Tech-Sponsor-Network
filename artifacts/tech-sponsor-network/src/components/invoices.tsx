@@ -12,6 +12,7 @@ import {
   getListCreatorInvoicesQueryKey,
   getListAdminInvoicesQueryKey,
   getListAdminCampaignApplicationsQueryKey,
+  useListAdminCampaignApplications,
   useGetCurrentUser,
   useListCreatorApplications,
   useGetCreatorInvoiceTerms,
@@ -204,10 +205,11 @@ function CreatorInvoiceCard({ invoice }: { invoice: CreatorInvoice }) {
 }
 
 export function CreatorInvoiceSection({ applications, email, accountName }: { applications: CreatorCampaignApplication[]; email: string; accountName: string }) {
-  const invoiceQuery = useListCreatorInvoices({ query: { queryKey: getListCreatorInvoicesQueryKey(), retry: false } });
+  const eligible = applications.filter(application => application.status === 'SUBMISSION_ACCEPTED' || application.status === 'WINNER' || application.status === 'PAID');
+  const invoiceQuery = useListCreatorInvoices({ query: { queryKey: getListCreatorInvoicesQueryKey(), enabled: eligible.length > 0, retry: false } });
   const invoices = invoiceQuery.data?.invoices ?? [];
   const invoiceByApplication = useMemo(() => new Map(invoices.map(invoice => [invoice.applicationId, invoice])), [invoices]);
-  const eligible = applications.filter(application => application.status === 'ACCEPTED' || application.status === 'WINNER');
+  if (!eligible.length) return null;
   return <section className="mt-12 border-t border-border/80 pt-9" data-testid="section-creator-invoices">
     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><div className="eyebrow flex items-center gap-2 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Campaign paperwork</div><h2 className="serif mt-2 text-3xl font-semibold tracking-[-.05em]">Invoices.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Submit paperwork for accepted work and keep track of its payment status.</p></div><span data-testid="text-creator-invoice-count" className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-semibold text-muted-foreground"><ReceiptText size={14} className="text-primary" />{invoiceQuery.isLoading ? 'Loading invoices' : `${invoices.length} ${invoices.length === 1 ? 'invoice' : 'invoices'}`}</span></div>
     {invoiceQuery.isLoading ? <div data-testid="loading-creator-invoices" className="mt-5 space-y-3"><div className="h-28 animate-pulse rounded-2xl border border-border bg-card/70" /><div className="h-28 animate-pulse rounded-2xl border border-border bg-card/70" /></div>
@@ -216,9 +218,8 @@ export function CreatorInvoiceSection({ applications, email, accountName }: { ap
         : <div data-testid="empty-creator-invoices" className="mt-5 rounded-2xl border border-dashed border-border bg-card/60 px-5 py-7"><p className="text-sm font-semibold">No invoices submitted yet.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Once you send an invoice, its status and records will appear here.</p><Link href={eligible.length ? '#list-invoice-eligible-applications' : '/campaigns'} className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-primary hover:bg-muted">{eligible.length ? 'Review accepted work' : 'Browse campaigns'}</Link></div>}
     {!!eligible.length && <div id="list-invoice-eligible-applications" className="mt-7 space-y-3" data-testid="list-invoice-eligible-applications">
       <h3 className="eyebrow text-muted-foreground">Ready for invoicing</h3>
-      {eligible.map(application => <CreatorInvoiceEligibleCard key={application.id} application={application} invoice={invoiceByApplication.get(application.id)} email={email} accountName={accountName} canSubmit={!invoiceQuery.isLoading && !invoiceQuery.isError} />)}
+      {eligible.map(application => <CreatorInvoiceEligibleCard key={application.id} application={application} invoice={invoiceByApplication.get(application.id)} email={email} accountName={accountName} canSubmit={application.status !== 'PAID' && !invoiceQuery.isLoading && !invoiceQuery.isError} />)}
     </div>}
-    {!eligible.length && <div data-testid="empty-invoice-eligible-applications" className="mt-5 rounded-2xl border border-dashed border-border bg-card/60 px-5 py-6"><p className="text-sm font-semibold">No campaigns are ready for invoicing.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Invoices become available once an application is accepted or marked as a winner.</p></div>}
   </section>;
 }
 
@@ -272,7 +273,7 @@ function MarkPaidForm({ invoice, onCancel, onDone }: { invoice: AdminInvoice; on
   </form></Form>;
 }
 
-function AdminInvoiceCard({ invoice }: { invoice: AdminInvoice }) {
+function AdminInvoiceCard({ invoice, allowActions }: { invoice: AdminInvoice; allowActions: boolean }) {
   const [editing, setEditing] = useState(false);
   const [notice, setNotice] = useState('');
   return <article data-testid={`row-admin-invoice-${invoice.id}`} className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5">
@@ -289,10 +290,10 @@ function AdminInvoiceCard({ invoice }: { invoice: AdminInvoice }) {
       <a href={invoiceFileUrl('admin', invoice.id, 'invoice')} target="_blank" rel="noreferrer" data-testid={`link-admin-invoice-file-${invoice.id}`} className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-2 text-xs font-semibold transition hover:bg-muted"><FileText size={14} className="text-primary" />Invoice PDF <ExternalLink size={12} /></a>
       <a href={invoice.workUrl} target="_blank" rel="noreferrer" data-testid={`link-admin-invoice-work-${invoice.id}`} className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-2 text-xs font-semibold transition hover:bg-muted">Published work <ExternalLink size={12} /></a>
       {invoice.hasWorkPhoto && <a href={invoiceFileUrl('admin', invoice.id, 'work-photo')} target="_blank" rel="noreferrer" data-testid={`link-admin-invoice-photo-${invoice.id}`} className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-2 text-xs font-semibold transition hover:bg-muted"><Image size={14} className="text-primary" />Work photo <ExternalLink size={12} /></a>}
-      {invoice.status === 'PENDING' && <button type="button" onClick={() => setEditing(open => !open)} data-testid={`button-mark-invoice-paid-${invoice.id}`} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:brightness-95"><BadgeCheck size={14} />{editing ? 'Close payment form' : 'Mark paid'}</button>}
+      {allowActions && invoice.status === 'PENDING' && <button type="button" onClick={() => setEditing(open => !open)} data-testid={`button-mark-invoice-paid-${invoice.id}`} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:brightness-95"><BadgeCheck size={14} />{editing ? 'Close payment form' : 'Mark paid'}</button>}
     </div>
     {notice && <p role="status" data-testid={`status-mark-paid-success-${invoice.id}`} className="mt-3 rounded-xl border border-[#bed1c1] bg-[#e7efe6] px-3 py-2.5 text-sm text-[#315848]">{notice}</p>}
-    {editing && invoice.status === 'PENDING' && <MarkPaidForm invoice={invoice} onCancel={() => setEditing(false)} onDone={() => { setEditing(false); setNotice('Invoice marked as Paid.'); }} />}
+    {editing && allowActions && invoice.status === 'PENDING' && <MarkPaidForm invoice={invoice} onCancel={() => setEditing(false)} onDone={() => { setEditing(false); setNotice('Invoice marked as Paid.'); }} />}
     {invoice.paidByName && invoice.paidDate && <p data-testid={`text-admin-invoice-paid-by-${invoice.id}`} className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck size={13} className="text-primary" />Recorded by {invoice.paidByName}</p>}
   </article>;
 }
@@ -301,6 +302,7 @@ export function AdminInvoicesPage() {
   const [, setLocation] = useLocation();
   const current = useGetCurrentUser({ query: { queryKey: getGetCurrentUserQueryKey(), retry: false } });
   const invoicesQuery = useListAdminInvoices({ query: { queryKey: getListAdminInvoicesQueryKey(), enabled: !!current.data && current.data.role === 'ADMIN', retry: false } });
+  const applicationsQuery = useListAdminCampaignApplications({ query: { queryKey: getListAdminCampaignApplicationsQueryKey(), enabled: !!current.data && current.data.role === 'ADMIN', retry: false } });
   useEffect(() => {
     if (current.isError) setLocation('/login');
     else if (current.data && current.data.role !== 'ADMIN') setLocation('/dashboard');
@@ -308,13 +310,17 @@ export function AdminInvoicesPage() {
   if (current.isLoading || (!current.data && !current.isError)) return <main className="min-h-[100dvh] bg-background"><AdminInvoiceHeader /><section className="mx-auto max-w-[1120px] px-5 py-10 sm:px-9"><InvoiceSkeleton /></section></main>;
   if (current.isError || current.data?.role !== 'ADMIN') return null;
   const invoices = invoicesQuery.data?.invoices ?? [];
+  const invoiceActionApplicationIds = new Set((applicationsQuery.data?.applications ?? [])
+    .filter(application => application.status === 'SUBMISSION_ACCEPTED' || application.status === 'WINNER')
+    .map(application => application.id));
   return <main className="min-h-[100dvh] bg-background">
     <AdminInvoiceHeader />
     <section className="mx-auto max-w-[1120px] px-5 py-8 sm:px-9 sm:py-12">
       <div className="page-enter"><div className="eyebrow flex items-center gap-2 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Administrator workspace</div><div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><h1 className="serif text-4xl font-semibold tracking-[-.06em] sm:text-5xl">Invoice register.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Review creator paperwork and record completed payments.</p></div><span data-testid="text-admin-invoice-count" className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold text-muted-foreground"><ReceiptText size={14} className="text-primary" />{invoicesQuery.isLoading ? 'Loading invoices' : `${invoices.length} ${invoices.length === 1 ? 'invoice' : 'invoices'}`}</span></div></div>
       {invoicesQuery.isLoading ? <InvoiceSkeleton /> : invoicesQuery.isError ? <div role="alert" data-testid="status-admin-invoices-error" className="mt-7 rounded-2xl border border-[#e3c2bb] bg-card p-6"><p className="text-sm font-semibold text-[#8f463d]">The invoice register couldn’t be loaded.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{messageOf(invoicesQuery.error)}</p><button type="button" onClick={() => invoicesQuery.refetch()} data-testid="button-retry-admin-invoices" className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Try again</button></div>
         : !invoices.length ? <div data-testid="empty-admin-invoices" className="mt-7 rounded-[24px] border border-dashed border-border bg-card/70 px-6 py-14 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><ReceiptText size={20} /></div><div className="eyebrow mt-5 text-primary">No invoices received</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">The payment register is clear.</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Submitted creator invoices will be listed here for review.</p><Link href="/admin/applications" className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground">View applications</Link></div>
-          : <div data-testid="list-admin-invoices" className="mt-7 space-y-3">{invoices.map(invoice => <AdminInvoiceCard key={invoice.id} invoice={invoice} />)}</div>}
+          : <div data-testid="list-admin-invoices" className="mt-7 space-y-3">{invoices.map(invoice => <AdminInvoiceCard key={invoice.id} invoice={invoice} allowActions={!applicationsQuery.isLoading && !applicationsQuery.isError && invoiceActionApplicationIds.has(invoice.applicationId)} />)}</div>}
+      {applicationsQuery.isError && invoices.length > 0 && <div role="alert" data-testid="status-admin-invoice-action-eligibility-error" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e3c2bb] bg-[#f7e9e6] p-3 text-xs text-[#8f463d]"><span>Invoice actions are hidden until submission eligibility can be confirmed.</span><button type="button" onClick={() => applicationsQuery.refetch()} data-testid="button-retry-admin-invoice-eligibility" className="font-semibold underline">Try again</button></div>}
     </section>
     <footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">Tech Sponsor Network <span className="px-2">·</span> Invoice register</footer>
   </main>;
@@ -326,6 +332,7 @@ function AdminInvoiceHeader() {
     <ResponsiveNav label="Administrator navigation" items={[
       { href: "/admin/campaigns", label: "Campaigns", testId: "link-invoices-admin-campaigns" },
       { href: "/admin/applications", label: "Applications", testId: "link-invoices-admin-applications" },
+      { href: "/admin/submissions", label: "Submissions" },
       { href: "/admin/email-log", label: "Email log" },
       { href: "/admin/dashboard", label: "Dashboard" },
     ]} current={{ label: "Invoices", testId: "link-invoices-admin-current" }} />

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import {
   CreateCreatorCampaignApplicationBody,
   CreateCreatorCampaignApplicationParams,
@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-zod";
 import {
   campaignApplicationsTable,
+  campaignSubmissionsTable,
   campaignsTable,
   creatorPlatformsTable,
   creatorProfilesTable,
@@ -35,11 +36,36 @@ function utcDateToday(): string {
 function creatorApplicationResponse(
   application: typeof campaignApplicationsTable.$inferSelect,
   campaignTitle: string,
+  campaignDeadline: string,
+  submission: typeof campaignSubmissionsTable.$inferSelect | null,
 ) {
   return {
     id: application.id,
     campaignId: application.campaignId,
     campaignTitle,
+    campaignDeadline,
+    startedAt: application.startedAt?.toISOString() ?? null,
+    submission: submission
+      ? {
+          id: submission.id,
+          applicationId: submission.applicationId,
+          attempt: submission.attempt,
+          title: submission.title,
+          projectUrl: submission.projectUrl,
+          description: submission.description,
+          coverUrl: submission.coverObjectPath
+            ? `/api/creator/submissions/${submission.id}/cover`
+            : null,
+          status: submission.status,
+          rejectionReason: submission.rejectionReason,
+          submittedAt: submission.submittedAt.toISOString(),
+          reviewedAt: submission.reviewedAt?.toISOString() ?? null,
+          canResubmit:
+            submission.status === "SUBMISSION_REJECTED" &&
+            submission.attempt === 1 &&
+            campaignDeadline >= utcDateToday(),
+        }
+      : null,
     personalMessage: application.personalMessage,
     paymentRuleAcknowledged: application.paymentRuleAcknowledged,
     rejectionReason: application.decisionReason,
@@ -58,6 +84,7 @@ router.get(
       .select({
         application: campaignApplicationsTable,
         campaignTitle: campaignsTable.title,
+        campaignDeadline: campaignsTable.deadline,
       })
       .from(campaignApplicationsTable)
       .innerJoin(
@@ -66,11 +93,34 @@ router.get(
       )
       .where(eq(campaignApplicationsTable.creatorId, creatorId))
       .orderBy(desc(campaignApplicationsTable.createdAt));
+    const applicationIds = rows.map(({ application }) => application.id);
+    const submissionRows =
+      applicationIds.length > 0
+        ? await db
+            .select()
+            .from(campaignSubmissionsTable)
+            .where(inArray(campaignSubmissionsTable.applicationId, applicationIds))
+            .orderBy(desc(campaignSubmissionsTable.attempt))
+        : [];
+    const latestByApplication = new Map<
+      string,
+      (typeof submissionRows)[number]
+    >();
+    for (const submission of submissionRows) {
+      if (!latestByApplication.has(submission.applicationId)) {
+        latestByApplication.set(submission.applicationId, submission);
+      }
+    }
 
     res.json(
       ListCreatorApplicationsResponse.parse({
-        applications: rows.map(({ application, campaignTitle }) =>
-          creatorApplicationResponse(application, campaignTitle),
+        applications: rows.map(({ application, campaignTitle, campaignDeadline }) =>
+          creatorApplicationResponse(
+            application,
+            campaignTitle,
+            campaignDeadline,
+            latestByApplication.get(application.id) ?? null,
+          ),
         ),
       }),
     );
@@ -180,7 +230,7 @@ router.post(
 
     res.status(201).json(
       CreateCreatorCampaignApplicationResponse.parse(
-        creatorApplicationResponse(application, campaign.title),
+        creatorApplicationResponse(application, campaign.title, campaign.deadline, null),
       ),
     );
     const creator = res.locals.authUser as typeof usersTable.$inferSelect;

@@ -437,16 +437,35 @@ export const GetCreatorCampaignResponse = zod.object({
 /**
  * @summary List the signed-in creator's campaign applications
  */
+export const listCreatorApplicationsResponseApplicationsItemCampaignDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+
+
 export const ListCreatorApplicationsResponse = zod.object({
   "applications": zod.array(zod.object({
   "id": zod.string().uuid(),
   "campaignId": zod.string().uuid(),
   "campaignTitle": zod.string(),
+  "campaignDeadline": zod.string().regex(listCreatorApplicationsResponseApplicationsItemCampaignDeadlineRegExp),
+  "startedAt": zod.coerce.date().nullable(),
+  "submission": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "applicationId": zod.string().uuid(),
+  "attempt": zod.union([zod.literal(1),zod.literal(2)]),
+  "title": zod.string(),
+  "projectUrl": zod.string().url(),
+  "description": zod.string(),
+  "coverUrl": zod.string().nullable(),
+  "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']),
+  "rejectionReason": zod.string().nullable(),
+  "submittedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "canResubmit": zod.boolean()
+}),zod.null()]),
   "personalMessage": zod.string(),
   "paymentRuleAcknowledged": zod.boolean(),
   "rejectionReason": zod.union([zod.literal('FOLLOWERS_BELOW_REQUIREMENT'),zod.literal('NICHE_NOT_A_FIT'),zod.literal('PROFILE_INCOMPLETE'),zod.literal('APPLICATION_MESSAGE_TOO_WEAK'),zod.literal('TOO_MANY_APPLICANTS'),zod.literal('OTHER'),zod.literal(null)]).nullable(),
   "decisionNote": zod.string().nullable(),
-  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
+  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
   "appliedAt": zod.coerce.date()
 }))
 })
@@ -470,17 +489,229 @@ export const CreateCreatorCampaignApplicationBody = zod.object({
   "paymentRuleAcknowledged": zod.boolean().describe('Must be true to record agreement to the fixed payment rule')
 })
 
+export const createCreatorCampaignApplicationResponseCampaignDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+
+
 export const CreateCreatorCampaignApplicationResponse = zod.object({
   "id": zod.string().uuid(),
   "campaignId": zod.string().uuid(),
   "campaignTitle": zod.string(),
+  "campaignDeadline": zod.string().regex(createCreatorCampaignApplicationResponseCampaignDeadlineRegExp),
+  "startedAt": zod.coerce.date().nullable(),
+  "submission": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "applicationId": zod.string().uuid(),
+  "attempt": zod.union([zod.literal(1),zod.literal(2)]),
+  "title": zod.string(),
+  "projectUrl": zod.string().url(),
+  "description": zod.string(),
+  "coverUrl": zod.string().nullable(),
+  "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']),
+  "rejectionReason": zod.string().nullable(),
+  "submittedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "canResubmit": zod.boolean()
+}),zod.null()]),
   "personalMessage": zod.string(),
   "paymentRuleAcknowledged": zod.boolean(),
   "rejectionReason": zod.union([zod.literal('FOLLOWERS_BELOW_REQUIREMENT'),zod.literal('NICHE_NOT_A_FIT'),zod.literal('PROFILE_INCOMPLETE'),zod.literal('APPLICATION_MESSAGE_TOO_WEAK'),zod.literal('TOO_MANY_APPLICANTS'),zod.literal('OTHER'),zod.literal(null)]).nullable(),
   "decisionNote": zod.string().nullable(),
-  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
+  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
   "appliedAt": zod.coerce.date()
 })
+
+
+/**
+ * @summary Start a project for an accepted campaign application
+ */
+export const StartCreatorCampaignProjectParams = zod.object({
+  "applicationId": zod.coerce.string().uuid()
+})
+
+export const StartCreatorCampaignProjectResponse = zod.object({
+  "applicationId": zod.string().uuid(),
+  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
+  "startedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Request a private upload URL for a submission cover
+ */
+export const RequestCreatorSubmissionUploadUrlParams = zod.object({
+  "applicationId": zod.coerce.string().uuid()
+})
+
+export const requestCreatorSubmissionUploadUrlBodyNameMax = 255;
+
+export const requestCreatorSubmissionUploadUrlBodySizeMax = 5242880;
+
+
+
+export const RequestCreatorSubmissionUploadUrlBody = zod.object({
+  "name": zod.string().min(1).max(requestCreatorSubmissionUploadUrlBodyNameMax),
+  "size": zod.number().int().min(1).max(requestCreatorSubmissionUploadUrlBodySizeMax),
+  "contentType": zod.enum(['image/jpeg', 'image/png'])
+})
+
+export const RequestCreatorSubmissionUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string()
+})
+
+
+/**
+ * @summary Submit or resubmit project work
+ */
+export const CreateCreatorCampaignSubmissionParams = zod.object({
+  "applicationId": zod.coerce.string().uuid()
+})
+
+export const createCreatorCampaignSubmissionBodyTitleMax = 160;
+
+export const createCreatorCampaignSubmissionBodyProjectUrlMax = 2048;
+
+export const createCreatorCampaignSubmissionBodyDescriptionMax = 500;
+
+export const createCreatorCampaignSubmissionBodyCoverObjectPathMax = 512;
+
+
+
+export const CreateCreatorCampaignSubmissionBody = zod.object({
+  "title": zod.string().min(1).max(createCreatorCampaignSubmissionBodyTitleMax),
+  "projectUrl": zod.string().url().max(createCreatorCampaignSubmissionBodyProjectUrlMax),
+  "description": zod.string().min(1).max(createCreatorCampaignSubmissionBodyDescriptionMax),
+  "coverObjectPath": zod.string().max(createCreatorCampaignSubmissionBodyCoverObjectPathMax).nullish()
+})
+
+export const CreateCreatorCampaignSubmissionResponse = zod.object({
+  "id": zod.string().uuid(),
+  "applicationId": zod.string().uuid(),
+  "attempt": zod.union([zod.literal(1),zod.literal(2)]),
+  "title": zod.string(),
+  "projectUrl": zod.string().url(),
+  "description": zod.string(),
+  "coverUrl": zod.string().nullable(),
+  "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']),
+  "rejectionReason": zod.string().nullable(),
+  "submittedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "canResubmit": zod.boolean()
+})
+
+
+/**
+ * @summary Open the signed-in creator's private submission cover
+ */
+export const GetCreatorSubmissionCoverParams = zod.object({
+  "submissionId": zod.coerce.string().uuid()
+})
+
+export const GetCreatorSubmissionCoverResponse = zod.unknown()
+
+
+/**
+ * @summary List campaign project submissions for administrators
+ */
+export const ListAdminCampaignSubmissionsQueryParams = zod.object({
+  "campaignId": zod.coerce.string().uuid().optional(),
+  "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']).optional()
+})
+
+export const listAdminCampaignSubmissionsResponseSubmissionsItemTwoPlatformsItemFollowersMin = 0;
+
+
+
+export const ListAdminCampaignSubmissionsResponse = zod.object({
+  "submissions": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "applicationId": zod.string().uuid(),
+  "attempt": zod.union([zod.literal(1),zod.literal(2)]),
+  "title": zod.string(),
+  "projectUrl": zod.string().url(),
+  "description": zod.string(),
+  "coverUrl": zod.string().nullable(),
+  "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']),
+  "rejectionReason": zod.string().nullable(),
+  "submittedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "canResubmit": zod.boolean()
+}).and(zod.object({
+  "campaignId": zod.string().uuid(),
+  "campaignTitle": zod.string(),
+  "creatorName": zod.string(),
+  "creatorCountry": zod.string(),
+  "creatorNiche": zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other']),
+  "platforms": zod.array(zod.object({
+  "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
+  "url": zod.string().url(),
+  "followers": zod.number().int().min(listAdminCampaignSubmissionsResponseSubmissionsItemTwoPlatformsItemFollowersMin),
+  "verified": zod.boolean()
+})),
+  "isCurrent": zod.boolean(),
+  "reviewedByName": zod.string().nullable()
+})))
+})
+
+
+/**
+ * @summary Accept or reject a project submission
+ */
+export const UpdateAdminCampaignSubmissionDecisionParams = zod.object({
+  "submissionId": zod.coerce.string().uuid()
+})
+
+export const updateAdminCampaignSubmissionDecisionBodyRejectionReasonMax = 500;
+
+
+
+export const UpdateAdminCampaignSubmissionDecisionBody = zod.object({
+  "status": zod.enum(['SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']),
+  "rejectionReason": zod.string().max(updateAdminCampaignSubmissionDecisionBodyRejectionReasonMax).optional()
+})
+
+export const updateAdminCampaignSubmissionDecisionResponseTwoPlatformsItemFollowersMin = 0;
+
+
+
+export const UpdateAdminCampaignSubmissionDecisionResponse = zod.object({
+  "id": zod.string().uuid(),
+  "applicationId": zod.string().uuid(),
+  "attempt": zod.union([zod.literal(1),zod.literal(2)]),
+  "title": zod.string(),
+  "projectUrl": zod.string().url(),
+  "description": zod.string(),
+  "coverUrl": zod.string().nullable(),
+  "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']),
+  "rejectionReason": zod.string().nullable(),
+  "submittedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "canResubmit": zod.boolean()
+}).and(zod.object({
+  "campaignId": zod.string().uuid(),
+  "campaignTitle": zod.string(),
+  "creatorName": zod.string(),
+  "creatorCountry": zod.string(),
+  "creatorNiche": zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other']),
+  "platforms": zod.array(zod.object({
+  "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
+  "url": zod.string().url(),
+  "followers": zod.number().int().min(updateAdminCampaignSubmissionDecisionResponseTwoPlatformsItemFollowersMin),
+  "verified": zod.boolean()
+})),
+  "isCurrent": zod.boolean(),
+  "reviewedByName": zod.string().nullable()
+}))
+
+
+/**
+ * @summary Open a private campaign submission cover
+ */
+export const GetAdminSubmissionCoverParams = zod.object({
+  "submissionId": zod.coerce.string().uuid()
+})
+
+export const GetAdminSubmissionCoverResponse = zod.unknown()
 
 
 /**
@@ -513,15 +744,15 @@ export const ListAdminCampaignApplicationsResponse = zod.object({
   "decidedAt": zod.coerce.date().nullable(),
   "decisionHistory": zod.array(zod.object({
   "id": zod.string().uuid(),
-  "previousStatus": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
-  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
+  "previousStatus": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
+  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
   "rejectionReason": zod.union([zod.literal('FOLLOWERS_BELOW_REQUIREMENT'),zod.literal('NICHE_NOT_A_FIT'),zod.literal('PROFILE_INCOMPLETE'),zod.literal('APPLICATION_MESSAGE_TOO_WEAK'),zod.literal('TOO_MANY_APPLICANTS'),zod.literal('OTHER'),zod.literal(null)]).nullable(),
   "note": zod.string().nullable(),
   "changeReason": zod.string().nullable(),
   "decidedByName": zod.string(),
   "decidedAt": zod.coerce.date()
 })),
-  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
+  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
   "appliedAt": zod.coerce.date()
 }))
 })
@@ -550,7 +781,7 @@ export const UpdateAdminCampaignApplicationDecisionBody = zod.object({
 
 export const UpdateAdminCampaignApplicationDecisionResponse = zod.object({
   "id": zod.string().uuid(),
-  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'WINNER', 'PAID']),
+  "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
   "rejectionReason": zod.union([zod.literal('FOLLOWERS_BELOW_REQUIREMENT'),zod.literal('NICHE_NOT_A_FIT'),zod.literal('PROFILE_INCOMPLETE'),zod.literal('APPLICATION_MESSAGE_TOO_WEAK'),zod.literal('TOO_MANY_APPLICANTS'),zod.literal('OTHER'),zod.literal(null)]).nullable(),
   "note": zod.string().nullable(),
   "decidedByName": zod.string(),
@@ -799,7 +1030,7 @@ export const UpdateAdminCampaignStatusResponse = zod.object({
 
 
 /**
- * @summary Request a private invoice or work-photo upload URL
+ * @summary Request a private invoice or optional work-photo upload URL
  */
 export const RequestInvoiceUploadUrlParams = zod.object({
   "applicationId": zod.coerce.string().uuid()
@@ -827,7 +1058,7 @@ export const RequestInvoiceUploadUrlResponse = zod.object({
 
 
 /**
- * @summary Get campaign reward terms for an eligible invoice
+ * @summary Get campaign reward terms after project submission acceptance
  */
 export const GetCreatorInvoiceTermsParams = zod.object({
   "applicationId": zod.coerce.string().uuid()
@@ -845,7 +1076,7 @@ export const GetCreatorInvoiceTermsResponse = zod.object({
 
 
 /**
- * @summary Submit one invoice for an accepted or winning application
+ * @summary Submit one invoice after the project submission is accepted
  */
 export const CreateCreatorInvoiceParams = zod.object({
   "applicationId": zod.coerce.string().uuid()

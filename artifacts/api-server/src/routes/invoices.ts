@@ -18,6 +18,7 @@ import {
 } from "@workspace/api-zod";
 import {
   campaignApplicationsTable,
+  campaignSubmissionsTable,
   campaignsTable,
   db,
   invoicesTable,
@@ -115,6 +116,18 @@ async function applicationForInvoice(
   return row;
 }
 
+async function hasAcceptedProjectSubmission(
+  applicationId: string,
+): Promise<boolean> {
+  const [submission] = await db
+    .select({ status: campaignSubmissionsTable.status })
+    .from(campaignSubmissionsTable)
+    .where(eq(campaignSubmissionsTable.applicationId, applicationId))
+    .orderBy(desc(campaignSubmissionsTable.attempt))
+    .limit(1);
+  return submission?.status === "SUBMISSION_ACCEPTED";
+}
+
 function invoiceBaseResponse(
   row: {
     invoice: typeof invoicesTable.$inferSelect;
@@ -187,8 +200,12 @@ router.post(
 
     const creator = userFrom(res);
     const row = await applicationForInvoice(params.data.applicationId, creator.id);
-    if (!row || !["ACCEPTED", "WINNER"].includes(row.application.status)) {
-      error(res, 403, "An accepted or winning application is required to upload an invoice.");
+    if (
+      !row ||
+      !["SUBMISSION_ACCEPTED", "WINNER"].includes(row.application.status) ||
+      !(await hasAcceptedProjectSubmission(row.application.id))
+    ) {
+      error(res, 403, "An accepted project submission is required to upload an invoice.");
       return;
     }
     const [existingInvoice] = await db
@@ -248,8 +265,12 @@ router.get(
       params.data.applicationId,
       userFrom(res).id,
     );
-    if (!row || !["ACCEPTED", "WINNER"].includes(row.application.status)) {
-      error(res, 403, "An accepted or winning application is required to view invoice terms.");
+    if (
+      !row ||
+      !["SUBMISSION_ACCEPTED", "WINNER"].includes(row.application.status) ||
+      !(await hasAcceptedProjectSubmission(row.application.id))
+    ) {
+      error(res, 403, "An accepted project submission is required to view invoice terms.");
       return;
     }
     res.json(
@@ -274,8 +295,12 @@ router.post(
 
     const creator = userFrom(res);
     const row = await applicationForInvoice(params.data.applicationId, creator.id);
-    if (!row || !["ACCEPTED", "WINNER"].includes(row.application.status)) {
-      error(res, 403, "Only Accepted or Winner applications can submit an invoice.");
+    if (
+      !row ||
+      !["SUBMISSION_ACCEPTED", "WINNER"].includes(row.application.status) ||
+      !(await hasAcceptedProjectSubmission(row.application.id))
+    ) {
+      error(res, 403, "Only applications with an accepted project submission can submit an invoice.");
       return;
     }
     const [existingInvoice] = await db
@@ -544,8 +569,20 @@ router.patch(
         .from(campaignApplicationsTable)
         .where(eq(campaignApplicationsTable.id, invoice.applicationId))
         .limit(1);
-      if (!application || !["ACCEPTED", "WINNER"].includes(application.status)) {
-        return { error: { status: 409, message: "The related application cannot be marked Paid." } };
+      const [projectSubmission] = application
+        ? await tx
+            .select({ status: campaignSubmissionsTable.status })
+            .from(campaignSubmissionsTable)
+            .where(eq(campaignSubmissionsTable.applicationId, application.id))
+            .orderBy(desc(campaignSubmissionsTable.attempt))
+            .limit(1)
+        : [];
+      if (
+        !application ||
+        !["SUBMISSION_ACCEPTED", "WINNER"].includes(application.status) ||
+        projectSubmission?.status !== "SUBMISSION_ACCEPTED"
+      ) {
+        return { error: { status: 409, message: "The related accepted project submission is required before marking Paid." } };
       }
 
       const recordedAt = new Date();
@@ -580,7 +617,7 @@ router.patch(
         .where(
           and(
             eq(campaignApplicationsTable.id, application.id),
-            inArray(campaignApplicationsTable.status, ["ACCEPTED", "WINNER"]),
+            inArray(campaignApplicationsTable.status, ["SUBMISSION_ACCEPTED", "WINNER"]),
           ),
         )
         .returning({ id: campaignApplicationsTable.id });

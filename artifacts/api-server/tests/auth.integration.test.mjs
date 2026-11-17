@@ -264,6 +264,7 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       bio: "Technology creator.",
       country: "IN",
       niche: "AI",
+      campaignAlertsEnabled: true,
       platforms: [
         {
           platform: "YouTube",
@@ -277,7 +278,11 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       cookie: creatorLogin.cookie,
       body: profileInput,
     });
-    assert.equal(savedProfile.response.status, 200);
+    assert.equal(
+      savedProfile.response.status,
+      200,
+      `Profile save failed: ${JSON.stringify(savedProfile.body)}`,
+    );
     assert.equal(savedProfile.body.completeness, 100);
     assert.equal(savedProfile.body.proofCode, initialProfile.body.proofCode);
     assert.equal(savedProfile.body.approvalStatus, "PENDING_APPROVAL");
@@ -652,7 +657,7 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       "changing a profile URL clears its previous verification",
     );
 
-    const rejectWithoutReason = await request(
+    const rejectProjectWithoutReason = await request(
       `/admin/creator-profiles/${creatorRecord.userId}/approval`,
       {
         method: "PATCH",
@@ -660,7 +665,7 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
         body: { status: "REJECTED" },
       },
     );
-    assert.equal(rejectWithoutReason.response.status, 400);
+    assert.equal(rejectProjectWithoutReason.response.status, 400);
 
     const rejected = await request(
       `/admin/creator-profiles/${creatorRecord.userId}/approval`,
@@ -1037,6 +1042,224 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     assert.equal(correctedDecision.response.status, 200);
     assert.equal(correctedDecision.body.status, "ACCEPTED");
 
+    const winnerBeforeSubmissionAcceptance = await request(
+      `/admin/applications/${applicationId}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: {
+          status: "WINNER",
+          changeReason: "This must wait for project acceptance.",
+        },
+      },
+    );
+    assert.equal(winnerBeforeSubmissionAcceptance.response.status, 409);
+
+    const invoiceTermsBeforeSubmissionAcceptance = await request(
+      `/creator/applications/${applicationId}/invoice-terms`,
+      { cookie: creatorLogin.cookie },
+    );
+    assert.equal(invoiceTermsBeforeSubmissionAcceptance.response.status, 403);
+
+    const creatorCannotStartAnotherApplication = await request(
+      `/creator/applications/${applicationId}/start`,
+      { method: "POST", cookie: otherCreatorLogin.cookie },
+    );
+    assert.equal(creatorCannotStartAnotherApplication.response.status, 404);
+    const startProject = await request(
+      `/creator/applications/${applicationId}/start`,
+      { method: "POST", cookie: creatorLogin.cookie },
+    );
+    assert.equal(startProject.response.status, 200);
+    assert.equal(startProject.body.status, "IN_PROGRESS");
+    assert.ok(startProject.body.startedAt);
+    const duplicateStart = await request(
+      `/creator/applications/${applicationId}/start`,
+      { method: "POST", cookie: creatorLogin.cookie },
+    );
+    assert.equal(duplicateStart.response.status, 409);
+
+    const creatorCannotRequestAdminSubmissions = await request(
+      "/admin/submissions",
+      { cookie: creatorLogin.cookie },
+    );
+    assert.equal(creatorCannotRequestAdminSubmissions.response.status, 403);
+    const creatorCannotRequestCoverUploadForUnacceptedApplication = await request(
+      `/creator/applications/${applicationId}/submission-upload-url`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: { name: "cover.jpg", size: 1024, contentType: "image/jpeg" },
+      },
+    );
+    assert.equal(
+      creatorCannotRequestCoverUploadForUnacceptedApplication.response.status,
+      200,
+    );
+    const creatorCannotReviewSubmission = await request(
+      `/admin/submissions/${randomUUID()}/decision`,
+      {
+        method: "PATCH",
+        cookie: creatorLogin.cookie,
+        body: { status: "SUBMISSION_ACCEPTED" },
+      },
+    );
+    assert.equal(creatorCannotReviewSubmission.response.status, 403);
+
+    const invalidProjectUrl = await request(
+      `/creator/applications/${applicationId}/submission`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          title: "Project deliverable",
+          projectUrl: "http://example.com/work",
+          description: "A concise description of the completed campaign work.",
+        },
+      },
+    );
+    assert.equal(invalidProjectUrl.response.status, 400);
+    const firstProjectSubmission = await request(
+      `/creator/applications/${applicationId}/submission`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          title: "Project deliverable",
+          projectUrl: "https://example.com/work",
+          description: "A concise description of the completed campaign work.",
+        },
+      },
+    );
+    assert.equal(firstProjectSubmission.response.status, 201);
+    assert.equal(firstProjectSubmission.body.attempt, 1);
+    assert.equal(firstProjectSubmission.body.status, "SUBMITTED");
+    assert.equal(firstProjectSubmission.body.coverUrl, null);
+    const duplicateSubmission = await request(
+      `/creator/applications/${applicationId}/submission`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          title: "Second project",
+          projectUrl: "https://example.com/second",
+          description: "This should not be accepted while the first is under review.",
+        },
+      },
+    );
+    assert.equal(duplicateSubmission.response.status, 409);
+
+    const adminSubmissions = await request(
+      `/admin/submissions?campaignId=${applicationCampaignId}&status=SUBMITTED`,
+      { cookie: adminLogin.cookie },
+    );
+    assert.equal(adminSubmissions.response.status, 200);
+    const firstAdminSubmission = adminSubmissions.body.submissions.find(
+      (item) => item.id === firstProjectSubmission.body.id,
+    );
+    assert.equal(firstAdminSubmission?.creatorName, "Auth Test Creator");
+    assert.equal(firstAdminSubmission?.isCurrent, true);
+    assert.equal(firstAdminSubmission?.platforms[0]?.verified, true);
+
+    const rejectWithoutReason = await request(
+      `/admin/submissions/${firstProjectSubmission.body.id}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "SUBMISSION_REJECTED" },
+      },
+    );
+    assert.equal(rejectWithoutReason.response.status, 400);
+    const rejectProject = await request(
+      `/admin/submissions/${firstProjectSubmission.body.id}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: {
+          status: "SUBMISSION_REJECTED",
+          rejectionReason: "Please add a clearer walkthrough of the results.",
+        },
+      },
+    );
+    assert.equal(rejectProject.response.status, 200);
+    assert.equal(rejectProject.body.status, "SUBMISSION_REJECTED");
+    assert.equal(rejectProject.body.isCurrent, true);
+    const creatorSeesSubmissionRejection = await request(
+      "/creator/applications",
+      { cookie: creatorLogin.cookie },
+    );
+    const rejectedProjectApplication =
+      creatorSeesSubmissionRejection.body.applications.find(
+        (item) => item.id === applicationId,
+      );
+    assert.equal(rejectedProjectApplication?.status, "SUBMISSION_REJECTED");
+    assert.equal(
+      rejectedProjectApplication?.submission?.rejectionReason,
+      "Please add a clearer walkthrough of the results.",
+    );
+    assert.equal(rejectedProjectApplication?.submission?.canResubmit, true);
+
+    await db.query(
+      "UPDATE tech_sponsor_campaigns SET deadline = CURRENT_DATE - INTERVAL '1 day' WHERE id = $1",
+      [applicationCampaignId],
+    );
+    const deadlineClosedSubmission = await request(
+      `/creator/applications/${applicationId}/submission`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          title: "Late project deliverable",
+          projectUrl: "https://example.com/late-work",
+          description: "This must be blocked after the campaign deadline.",
+        },
+      },
+    );
+    assert.equal(deadlineClosedSubmission.response.status, 403);
+    await db.query(
+      "UPDATE tech_sponsor_campaigns SET deadline = $2 WHERE id = $1",
+      [applicationCampaignId, validCampaignInput.deadline],
+    );
+
+    const secondProjectSubmission = await request(
+      `/creator/applications/${applicationId}/submission`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          title: "Updated project deliverable",
+          projectUrl: "https://example.com/updated-work",
+          description: "An updated description with a clear results walkthrough.",
+        },
+      },
+    );
+    assert.equal(secondProjectSubmission.response.status, 201);
+    assert.equal(secondProjectSubmission.body.attempt, 2);
+    const thirdProjectSubmission = await request(
+      `/creator/applications/${applicationId}/submission`,
+      {
+        method: "POST",
+        cookie: creatorLogin.cookie,
+        body: {
+          title: "Third attempt",
+          projectUrl: "https://example.com/third-work",
+          description: "The one permitted resubmission has already been used.",
+        },
+      },
+    );
+    assert.equal(thirdProjectSubmission.response.status, 409);
+    const acceptProject = await request(
+      `/admin/submissions/${secondProjectSubmission.body.id}/decision`,
+      {
+        method: "PATCH",
+        cookie: adminLogin.cookie,
+        body: { status: "SUBMISSION_ACCEPTED" },
+      },
+    );
+    assert.equal(acceptProject.response.status, 200);
+    assert.equal(acceptProject.body.status, "SUBMISSION_ACCEPTED");
+    assert.equal(acceptProject.body.reviewedByName, "Auth Test");
+
     const winnerWithoutReason = await request(
       `/admin/applications/${applicationId}/decision`,
       {
@@ -1059,6 +1282,13 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     );
     assert.equal(winner.response.status, 200);
     assert.equal(winner.body.status, "WINNER");
+
+    const invoiceTermsAfterSubmissionAcceptance = await request(
+      `/creator/applications/${applicationId}/invoice-terms`,
+      { cookie: creatorLogin.cookie },
+    );
+    assert.equal(invoiceTermsAfterSubmissionAcceptance.response.status, 200);
+    assert.equal(invoiceTermsAfterSubmissionAcceptance.body.rewardAmount, 120.5);
 
     const updatedAdminApplications = await request("/admin/applications", {
       cookie: adminLogin.cookie,
