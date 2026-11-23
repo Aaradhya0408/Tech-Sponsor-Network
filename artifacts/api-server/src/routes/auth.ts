@@ -41,6 +41,9 @@ import {
   type Request,
   type Response,
 } from "express";
+import { sendEmail } from "../lib/email";
+import { appUrl, renderTransactionalEmail } from "../lib/email-template";
+import { rateLimit } from "../lib/request-guards";
 
 const router: IRouter = Router();
 const SESSION_COOKIE = "tsn_session";
@@ -145,7 +148,15 @@ export function requireRole(role: "CREATOR" | "ADMIN") {
   };
 }
 
-router.post("/auth/signup", async (req, res): Promise<void> => {
+router.post(
+  "/auth/signup",
+  rateLimit({
+    name: "signup",
+    maxAttempts: 5,
+    windowMs: 15 * 60 * 1000,
+    identity: (req) => (typeof req.body?.email === "string" ? req.body.email : null),
+  }),
+  async (req, res): Promise<void> => {
   const parsed = SignUpBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Enter a name, valid email, and password of at least 10 characters." });
@@ -185,14 +196,22 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
     return;
   }
 
-  const origin =
-    req.get("origin") ?? `${req.protocol}://${req.get("host") ?? "localhost"}`;
-  const verificationUrl = new URL("/", origin);
+  const verificationUrl = new URL("/", appUrl("/"));
   verificationUrl.searchParams.set("verify", verificationToken);
-  req.log.info(
-    { email, verificationUrl: verificationUrl.toString() },
-    "Email verification link (temporary development delivery)",
-  );
+  if (process.env.NODE_ENV === "production") {
+    void sendEmail({
+      to: email,
+      type: "EMAIL_VERIFICATION",
+      subject: "Verify your Tech Sponsor Network email",
+      allowUnverified: true,
+      html: renderTransactionalEmail({
+        title: "Verify your email",
+        paragraphs: ["Use the button below to verify your Tech Sponsor Network account."],
+        buttonLabel: "Verify email",
+        buttonUrl: verificationUrl.toString(),
+      }),
+    }).catch(() => {});
+  }
 
   res
     .status(201)
@@ -201,15 +220,24 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
         message:
           process.env.NODE_ENV === "development"
             ? "Account created. Use the development verification link below, then log in."
-            : "Account created. Use the verification link printed by the server, then log in.",
+          : "Account created. Check your email for a verification link, then log in.",
         ...(process.env.NODE_ENV === "development"
           ? { verificationUrl: verificationUrl.toString() }
           : {}),
       }),
     );
-});
+  },
+);
 
-router.post("/auth/login", async (req, res): Promise<void> => {
+router.post(
+  "/auth/login",
+  rateLimit({
+    name: "login",
+    maxAttempts: 10,
+    windowMs: 15 * 60 * 1000,
+    identity: (req) => (typeof req.body?.email === "string" ? req.body.email : null),
+  }),
+  async (req, res): Promise<void> => {
   const parsed = LogInBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Enter a valid email and password." });
@@ -233,13 +261,13 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   }
 
   let authenticatedUser = user;
-  if (
-    adminEmails.has(user.email.trim().toLowerCase()) &&
-    user.role !== "ADMIN"
-  ) {
+  const expectedRole = adminEmails.has(user.email.trim().toLowerCase())
+    ? "ADMIN"
+    : "CREATOR";
+  if (user.role !== expectedRole) {
     const [promotedUser] = await db
       .update(usersTable)
-      .set({ role: "ADMIN" })
+      .set({ role: expectedRole })
       .where(eq(usersTable.id, user.id))
       .returning();
     if (promotedUser) authenticatedUser = promotedUser;
@@ -253,9 +281,18 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   });
   res.cookie(SESSION_COOKIE, sessionToken, cookieOptions());
   res.json(LogInResponse.parse(userResponse(authenticatedUser)));
-});
+  },
+);
 
-router.post("/auth/resend-verification", async (req, res): Promise<void> => {
+router.post(
+  "/auth/resend-verification",
+  rateLimit({
+    name: "resend-verification",
+    maxAttempts: 3,
+    windowMs: 15 * 60 * 1000,
+    identity: (req) => (typeof req.body?.email === "string" ? req.body.email : null),
+  }),
+  async (req, res): Promise<void> => {
   const parsed = ResendVerificationLinkBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Enter a valid email and password." });
@@ -308,14 +345,22 @@ router.post("/auth/resend-verification", async (req, res): Promise<void> => {
 
   let verificationUrl: URL | undefined;
   if (tokenCreated) {
-    const origin =
-      req.get("origin") ?? `${req.protocol}://${req.get("host") ?? "localhost"}`;
-    verificationUrl = new URL("/", origin);
+    verificationUrl = new URL("/", appUrl("/"));
     verificationUrl.searchParams.set("verify", verificationToken);
-    req.log.info(
-      { email, verificationUrl: verificationUrl.toString() },
-      "Email verification link (temporary development delivery)",
-    );
+    if (process.env.NODE_ENV === "production") {
+      void sendEmail({
+        to: user.email,
+        type: "EMAIL_VERIFICATION",
+        subject: "Verify your Tech Sponsor Network email",
+        allowUnverified: true,
+        html: renderTransactionalEmail({
+          title: "Verify your email",
+          paragraphs: ["Use the button below to verify your Tech Sponsor Network account."],
+          buttonLabel: "Verify email",
+          buttonUrl: verificationUrl.toString(),
+        }),
+      }).catch(() => {});
+    }
   }
 
   res.json(
@@ -326,9 +371,18 @@ router.post("/auth/resend-verification", async (req, res): Promise<void> => {
         : {}),
     }),
   );
-});
+  },
+);
 
-router.post("/auth/password-reset/request", async (req, res): Promise<void> => {
+router.post(
+  "/auth/password-reset/request",
+  rateLimit({
+    name: "password-reset-request",
+    maxAttempts: 3,
+    windowMs: 15 * 60 * 1000,
+    identity: (req) => (typeof req.body?.email === "string" ? req.body.email : null),
+  }),
+  async (req, res): Promise<void> => {
   const parsed = RequestPasswordResetBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Enter a valid email address." });
@@ -339,7 +393,7 @@ router.post("/auth/password-reset/request", async (req, res): Promise<void> => {
     "If an account exists for that email, password reset instructions will be available shortly.";
   let resetUrl: URL | undefined;
 
-  if (process.env.NODE_ENV === "development") {
+  {
     const email = parsed.data.email.trim().toLowerCase();
     const [user] = await db
       .select({ id: usersTable.id })
@@ -361,14 +415,22 @@ router.post("/auth/password-reset/request", async (req, res): Promise<void> => {
         });
       });
 
-      const origin =
-        req.get("origin") ?? `${req.protocol}://${req.get("host") ?? "localhost"}`;
-      resetUrl = new URL("/reset-password", origin);
+      resetUrl = new URL("/reset-password", appUrl("/"));
       resetUrl.searchParams.set("token", resetToken);
-      req.log.info(
-        { email, resetUrl: resetUrl.toString() },
-        "Password reset link (development only)",
-      );
+      if (process.env.NODE_ENV === "production") {
+        void sendEmail({
+          to: email,
+          type: "PASSWORD_RESET",
+          subject: "Reset your Tech Sponsor Network password",
+          allowUnverified: true,
+          html: renderTransactionalEmail({
+            title: "Reset your password",
+            paragraphs: ["Use the button below to choose a new password. This link expires in 30 minutes."],
+            buttonLabel: "Reset password",
+            buttonUrl: resetUrl.toString(),
+          }),
+        }).catch(() => {});
+      }
     }
   }
 
@@ -380,9 +442,17 @@ router.post("/auth/password-reset/request", async (req, res): Promise<void> => {
         : {}),
     }),
   );
-});
+  },
+);
 
-router.post("/auth/password-reset/confirm", async (req, res): Promise<void> => {
+router.post(
+  "/auth/password-reset/confirm",
+  rateLimit({
+    name: "password-reset-confirm",
+    maxAttempts: 8,
+    windowMs: 15 * 60 * 1000,
+  }),
+  async (req, res): Promise<void> => {
   const parsed = ResetPasswordBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({
@@ -428,7 +498,8 @@ router.post("/auth/password-reset/confirm", async (req, res): Promise<void> => {
       message: "Your password has been updated. Sign in with your new password.",
     }),
   );
-});
+  },
+);
 
 router.post("/auth/logout", async (req, res): Promise<void> => {
   const sessionToken = req.signedCookies?.[SESSION_COOKIE];
@@ -457,25 +528,27 @@ router.post("/auth/verify", async (req, res): Promise<void> => {
   const tokenHash = hashToken(parsed.data.token);
   const verified = await db.transaction(async (tx) => {
     const [verification] = await tx
-      .select()
-      .from(verificationTokensTable)
+      .delete(verificationTokensTable)
       .where(
         and(
           eq(verificationTokensTable.tokenHash, tokenHash),
           gt(verificationTokensTable.expiresAt, new Date()),
         ),
       )
-      .limit(1);
+      .returning({ userId: verificationTokensTable.userId });
 
     if (!verification) return false;
-    await tx
+    const [updated] = await tx
       .update(usersTable)
       .set({ emailVerified: true })
-      .where(eq(usersTable.id, verification.userId));
-    await tx
-      .delete(verificationTokensTable)
-      .where(eq(verificationTokensTable.tokenHash, tokenHash));
-    return true;
+      .where(
+        and(
+          eq(usersTable.id, verification.userId),
+          eq(usersTable.emailVerified, false),
+        ),
+      )
+      .returning({ id: usersTable.id });
+    return Boolean(updated);
   });
 
   if (!verified) {

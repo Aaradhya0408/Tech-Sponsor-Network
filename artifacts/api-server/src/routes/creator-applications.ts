@@ -18,6 +18,7 @@ import { Router, type IRouter, type Response } from "express";
 import { campaignEligibilityReasons } from "../lib/campaign-eligibility";
 import { notifyApplicationReceived } from "../lib/email-events";
 import { requireRole } from "./auth";
+import { rateLimit } from "../lib/request-guards";
 
 const router: IRouter = Router();
 
@@ -130,6 +131,13 @@ router.get(
 router.post(
   "/creator/campaigns/:campaignId/applications",
   requireRole("CREATOR"),
+  rateLimit({
+    name: "campaign-apply",
+    maxAttempts: 10,
+    windowMs: 15 * 60 * 1000,
+    identity: (_req, res) =>
+      (res.locals.authUser as typeof usersTable.$inferSelect | undefined)?.id,
+  }),
   async (req, res): Promise<void> => {
     const params = CreateCreatorCampaignApplicationParams.safeParse(req.params);
     const body = CreateCreatorCampaignApplicationBody.safeParse(req.body);

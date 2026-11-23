@@ -56,6 +56,10 @@ export const campaignsTable = pgTable(
       table.status,
       table.deadline,
     ),
+    statusCreatedIndex: index("tech_sponsor_campaign_status_created_idx").on(
+      table.status,
+      table.createdAt,
+    ),
     positiveReward: check(
       "tech_sponsor_campaign_reward_positive",
       sql`${table.rewardAmount} > 0`,

@@ -30,6 +30,7 @@ import {
 import {
   notifySubmissionReceived,
 } from "../lib/email-events";
+import { rateLimit } from "../lib/request-guards";
 import { requireRole } from "./auth";
 
 const router: IRouter = Router();
@@ -193,6 +194,13 @@ router.post(
 router.post(
   "/creator/applications/:applicationId/submission-upload-url",
   requireRole("CREATOR"),
+  rateLimit({
+    name: "project-submission-upload",
+    maxAttempts: 10,
+    windowMs: 15 * 60 * 1000,
+    identity: (_req, res) =>
+      (res.locals.authUser as UserRecord | undefined)?.id,
+  }),
   async (req, res): Promise<void> => {
     const params = RequestCreatorSubmissionUploadUrlParams.safeParse(req.params);
     const body = RequestCreatorSubmissionUploadUrlBody.safeParse(req.body);
@@ -236,7 +244,10 @@ router.post(
       );
       res.json(RequestCreatorSubmissionUploadUrlResponse.parse(upload));
     } catch (err) {
-      req.log.error({ err }, "Unable to create private project-cover upload URL");
+      req.log.error(
+        { errorName: err instanceof Error ? err.name : "UnknownError" },
+        "Unable to create private project-cover upload URL",
+      );
       error(res, 503, "Private image storage is temporarily unavailable.");
     }
   },
@@ -245,6 +256,13 @@ router.post(
 router.post(
   "/creator/applications/:applicationId/submission",
   requireRole("CREATOR"),
+  rateLimit({
+    name: "project-submit",
+    maxAttempts: 5,
+    windowMs: 15 * 60 * 1000,
+    identity: (_req, res) =>
+      (res.locals.authUser as UserRecord | undefined)?.id,
+  }),
   async (req, res): Promise<void> => {
     const params = CreateCreatorCampaignSubmissionParams.safeParse(req.params);
     const body = CreateCreatorCampaignSubmissionBody.safeParse(req.body);
@@ -312,7 +330,10 @@ router.post(
           return;
         }
       } catch (err) {
-        req.log.warn({ err }, "Unable to verify private project-cover upload");
+        req.log.warn(
+          { errorName: err instanceof Error ? err.name : "UnknownError" },
+          "Unable to verify private project-cover upload",
+        );
         error(res, 400, "The cover image is missing, unreadable, or larger than 5 MB.");
         return;
       }
@@ -430,12 +451,18 @@ router.post(
         result.submission.id,
         result.campaignTitle,
       ).catch((err) =>
-        req.log.warn({ err }, "Submission-received email could not be delivered"),
+        req.log.warn(
+          { errorName: err instanceof Error ? err.name : "UnknownError" },
+          "Submission-received email could not be delivered",
+        ),
       );
     } catch (err) {
       if (coverObjectPath) await deletePrivateObject(coverObjectPath);
       if (stagingPath) await removeStagingObject(stagingPath);
-      req.log.error({ err }, "Unable to save creator project submission");
+      req.log.error(
+        { errorName: err instanceof Error ? err.name : "UnknownError" },
+        "Unable to save creator project submission",
+      );
       error(res, 500, "The project submission could not be saved. Please try again.");
     }
   },
@@ -475,7 +502,13 @@ async function serveCreatorCover(
       "project-cover",
     );
   } catch (err) {
-    req.log.error({ err, submissionId: rawId }, "Unable to open private submission cover");
+    req.log.error(
+      {
+        errorName: err instanceof Error ? err.name : "UnknownError",
+        submissionId: rawId,
+      },
+      "Unable to open private submission cover",
+    );
     if (!res.headersSent) error(res, 500, "The submission cover could not be opened.");
   }
 }

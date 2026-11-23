@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   integer,
+  index,
   pgTable,
   text,
   timestamp,
@@ -38,35 +39,43 @@ export const CREATOR_APPROVAL_STATUSES = [
   "REJECTED",
 ] as const;
 
-export const creatorProfilesTable = pgTable("tech_sponsor_creator_profiles", {
-  userId: uuid("user_id")
-    .primaryKey()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
-  displayName: text("display_name").notNull(),
-  bio: text("bio").notNull().default(""),
-  country: text("country").notNull().default(""),
-  niche: text("niche", { enum: CREATOR_NICHES }).notNull().default("Technology"),
-  proofCode: text("proof_code").notNull().unique(),
-  approvalStatus: text("approval_status", {
-    enum: CREATOR_APPROVAL_STATUSES,
-  })
-    .notNull()
-    .default("PENDING_APPROVAL"),
-  rejectionReason: text("rejection_reason"),
-  campaignAlertsEnabled: boolean("campaign_alerts_enabled")
-    .notNull()
-    .default(true),
-  campaignAlertsTokenVersion: uuid("campaign_alerts_token_version")
-    .notNull()
-    .defaultRandom(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+export const creatorProfilesTable = pgTable(
+  "tech_sponsor_creator_profiles",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull(),
+    bio: text("bio").notNull().default(""),
+    country: text("country").notNull().default(""),
+    niche: text("niche", { enum: CREATOR_NICHES }).notNull().default("Technology"),
+    proofCode: text("proof_code").notNull().unique(),
+    approvalStatus: text("approval_status", {
+      enum: CREATOR_APPROVAL_STATUSES,
+    })
+      .notNull()
+      .default("PENDING_APPROVAL"),
+    rejectionReason: text("rejection_reason"),
+    campaignAlertsEnabled: boolean("campaign_alerts_enabled")
+      .notNull()
+      .default(true),
+    campaignAlertsTokenVersion: uuid("campaign_alerts_token_version")
+      .notNull()
+      .defaultRandom(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    approvalCreatedIndex: index(
+      "tech_sponsor_creator_profile_approval_created_idx",
+    ).on(table.approvalStatus, table.createdAt),
+  }),
+);
 
 export const creatorPlatformsTable = pgTable(
   "tech_sponsor_creator_platforms",

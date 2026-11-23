@@ -246,7 +246,10 @@ router.post(
       );
       res.json(RequestInvoiceUploadUrlResponse.parse(upload));
     } catch (err) {
-      req.log.error({ err }, "Unable to create private invoice upload URL");
+      req.log.error(
+        { errorName: err instanceof Error ? err.name : "UnknownError" },
+        "Unable to create private invoice upload URL",
+      );
       error(res, 503, "Private file storage is temporarily unavailable.");
     }
   },
@@ -386,7 +389,10 @@ router.post(
         }
       }
     } catch (err) {
-      req.log.warn({ err }, "Unable to verify private invoice upload");
+      req.log.warn(
+        { errorName: err instanceof Error ? err.name : "UnknownError" },
+        "Unable to verify private invoice upload",
+      );
       error(res, 400, "A required file is missing, unreadable, or larger than 5 MB.");
       return;
     }
@@ -466,7 +472,10 @@ router.post(
     } catch (err) {
       await deletePrivateObject(invoiceObjectPath);
       if (workPhotoObjectPath) await deletePrivateObject(workPhotoObjectPath);
-      req.log.error({ err }, "Unable to save creator invoice");
+      req.log.error(
+        { errorName: err instanceof Error ? err.name : "UnknownError" },
+        "Unable to save creator invoice",
+      );
       error(res, 500, "The invoice could not be saved. Please try again.");
     }
   },
@@ -695,7 +704,14 @@ async function serveInvoiceFile(
       fileKind === "invoice" ? `${invoice.invoiceNumber}.pdf` : "work-photo",
     );
   } catch (err) {
-    req.log.error({ err, invoiceId, fileKind }, "Unable to open private invoice file");
+    req.log.error(
+      {
+        errorName: err instanceof Error ? err.name : "UnknownError",
+        invoiceId,
+        fileKind,
+      },
+      "Unable to open private invoice file",
+    );
     if (!res.headersSent) error(res, 500, "The invoice file could not be opened.");
   }
 }

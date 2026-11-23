@@ -77,6 +77,12 @@ export const campaignApplicationsTable = pgTable(
     campaignCreatedIndex: index(
       "tech_sponsor_campaign_application_campaign_created_idx",
     ).on(table.campaignId, table.createdAt),
+    statusCreatedIndex: index(
+      "tech_sponsor_campaign_application_status_created_idx",
+    ).on(table.status, table.createdAt),
+    campaignStatusCreatedIndex: index(
+      "tech_sponsor_campaign_application_campaign_status_created_idx",
+    ).on(table.campaignId, table.status, table.createdAt),
     validMessageLength: check(
       "tech_sponsor_campaign_application_message_length",
       sql`char_length(${table.personalMessage}) >= 20 AND char_length(${table.personalMessage}) <= 1000`,

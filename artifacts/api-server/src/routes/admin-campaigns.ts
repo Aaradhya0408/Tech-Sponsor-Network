@@ -237,7 +237,7 @@ router.post(
     }
     const parsed = CreateAdminCampaignBody.safeParse(req.body);
     if (!parsed.success) {
-      req.log.warn({ errors: parsed.error.issues }, "Invalid campaign input");
+      req.log.warn({ issueCount: parsed.error.issues.length }, "Invalid campaign input");
       error(res, 400, "Check the campaign fields and try again.");
       return;
     }
@@ -273,10 +273,7 @@ router.patch(
     const parsed = UpdateAdminCampaignBody.safeParse(req.body);
     if (!params.success || !parsed.success) {
       req.log.warn(
-        {
-          params: params.success ? undefined : params.error.issues,
-          errors: parsed.success ? undefined : parsed.error.issues,
-        },
+        { invalidParams: !params.success, invalidBody: !parsed.success },
         "Invalid campaign update",
       );
       error(res, 400, "Check the campaign fields and try again.");

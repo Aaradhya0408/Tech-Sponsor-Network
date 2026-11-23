@@ -374,7 +374,10 @@ router.patch(
       result.submission.status as "SUBMISSION_ACCEPTED" | "SUBMISSION_REJECTED",
       result.submission.rejectionReason,
     ).catch((err) =>
-      req.log.warn({ err }, "Submission-decision email could not be delivered"),
+      req.log.warn(
+        { errorName: err instanceof Error ? err.name : "UnknownError" },
+        "Submission-decision email could not be delivered",
+      ),
     );
   },
 );
@@ -407,7 +410,13 @@ async function serveAdminCover(
       "project-cover",
     );
   } catch (err) {
-    req.log.error({ err, submissionId: rawId }, "Unable to open private submission cover");
+    req.log.error(
+      {
+        errorName: err instanceof Error ? err.name : "UnknownError",
+        submissionId: rawId,
+      },
+      "Unable to open private submission cover",
+    );
     if (!res.headersSent) error(res, 500, "The submission cover could not be opened.");
   }
 }

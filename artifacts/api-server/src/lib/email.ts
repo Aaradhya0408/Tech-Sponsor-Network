@@ -9,6 +9,7 @@ export interface SendEmailInput {
   type: string;
   subject: string;
   html: string;
+  allowUnverified?: boolean;
 }
 
 export interface SendEmailResult {
@@ -162,7 +163,7 @@ export async function sendEmail(
       .where(sql`lower(${usersTable.email}) = ${toEmail}`)
       .limit(1);
 
-    if (!recipient || !recipient.emailVerified) {
+    if (!recipient || (!recipient.emailVerified && !input.allowUnverified)) {
       const entry = await createEmailLog(
         input,
         toEmail,

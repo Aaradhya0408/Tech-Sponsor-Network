@@ -58,6 +58,9 @@ export const campaignSubmissionsTable = pgTable(
     statusSubmittedIndex: index(
       "tech_sponsor_campaign_submission_status_submitted_idx",
     ).on(table.status, table.submittedAt),
+    creatorSubmittedIndex: index(
+      "tech_sponsor_campaign_submission_creator_submitted_idx",
+    ).on(table.creatorId, table.submittedAt),
     validAttempt: check(
       "tech_sponsor_campaign_submission_attempt_range",
       sql`${table.attempt} IN (1, 2)`,
