@@ -364,6 +364,21 @@ paths:
       summary: List all creator profiles for review
       security:
         - SessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: approvalStatus
+          in: query
+          schema:
+            $ref: "#/components/schemas/CreatorApprovalStatus"
       responses:
         "200":
           description: Creator profiles
@@ -497,6 +512,17 @@ paths:
       summary: List published campaigns available to creators
       security:
         - SessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
       responses:
         "200":
           description: Published campaigns with deadlines that have not passed
@@ -562,6 +588,22 @@ paths:
       summary: List the signed-in creator's campaign applications
       security:
         - SessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: campaignId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
       responses:
         "200":
           description: Applications belonging to the signed-in creator
@@ -835,6 +877,16 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/CampaignSubmissionStatus"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
       responses:
         "200":
           description: Project submissions with creator and campaign details
@@ -963,6 +1015,17 @@ paths:
       description: Application records, creator profile details, and decision history for administrators.
       security:
         - SessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
       responses:
         "200":
           description: Campaign applications
@@ -1047,6 +1110,17 @@ paths:
       summary: List campaigns for administrators
       security:
         - SessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
       responses:
         "200":
           description: Campaign list
@@ -1341,6 +1415,17 @@ paths:
       summary: List invoices belonging to the signed-in creator
       security:
         - SessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
       responses:
         "200":
           description: Creator invoices
@@ -1367,6 +1452,17 @@ paths:
       summary: List all submitted invoices for administrators
       security:
         - SessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
       responses:
         "200":
           description: Invoices with creator and campaign information
@@ -1450,6 +1546,17 @@ paths:
       summary: List the latest transactional email attempts
       security:
         - SessionCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
       responses:
         "200":
           description: Most recent email delivery attempts
@@ -1908,7 +2015,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminCreatorProfile"
-      required: [creators]
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [creators, pagination]
     CreatorApprovalInput:
       type: object
       additionalProperties: false
@@ -2055,6 +2164,8 @@ components:
             $ref: "#/components/schemas/CreatorNiche"
         status:
           $ref: "#/components/schemas/CampaignStatus"
+        hasApplied:
+          type: boolean
         paymentRule:
           type: string
         createdAt:
@@ -2088,7 +2199,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminCampaign"
-      required: [campaigns]
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [campaigns, pagination]
     CampaignApplicationStatus:
       type: string
       enum:
@@ -2258,7 +2371,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminCampaignSubmission"
-      required: [submissions]
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [submissions, pagination]
     CampaignApplicationRejectionReason:
       type: string
       enum:
@@ -2417,7 +2532,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CreatorCampaignApplication"
-      required: [applications]
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [applications, pagination]
     InvoiceUploadInput:
       type: object
       additionalProperties: false
@@ -2589,7 +2706,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CreatorInvoice"
-      required: [invoices]
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [invoices, pagination]
     AdminInvoice:
       allOf:
         - $ref: "#/components/schemas/Invoice"
@@ -2608,7 +2727,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminInvoice"
-      required: [invoices]
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [invoices, pagination]
     AdminEmailLogEntry:
       type: object
       properties:
@@ -2635,10 +2756,12 @@ components:
       properties:
         emails:
           type: array
-          maxItems: 100
+          maxItems: 20
           items:
             $ref: "#/components/schemas/AdminEmailLogEntry"
-      required: [emails]
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [emails, pagination]
     AdminTestEmailResult:
       type: object
       properties:
@@ -2726,7 +2849,25 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminCampaignApplication"
-      required: [applications]
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [applications, pagination]
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          const: 20
+        total:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+      required: [page, pageSize, total, totalPages]
     ErrorResponse:
       type: object
       properties:

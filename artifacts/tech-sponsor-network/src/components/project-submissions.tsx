@@ -22,6 +22,7 @@ import {
 import type { CreatorCampaignApplication, AdminCampaignSubmission, CampaignSubmissionStatus, ProjectSubmissionInput } from '@workspace/api-client-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ResponsiveNav } from '@/components/responsive-nav';
+import { ListPagination } from '@/components/list-pagination';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const submissionSchema = z.object({
@@ -203,10 +204,12 @@ export function AdminSubmissionsPage() {
   const current = useGetCurrentUser({ query: { queryKey: getGetCurrentUserQueryKey(), retry: false } });
   const [campaignId, setCampaignId] = useState('');
   const [status, setStatus] = useState('');
-  const params = { ...(campaignId ? { campaignId } : {}), ...(status ? { status: status as CampaignSubmissionStatus } : {}) };
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const params = { page, search, ...(campaignId ? { campaignId } : {}), ...(status ? { status: status as CampaignSubmissionStatus } : {}) };
   const queryKey = getListAdminCampaignSubmissionsQueryKey(params);
   const submissionsQuery = useListAdminCampaignSubmissions(params, { query: { enabled: !!current.data && current.data.role === 'ADMIN', queryKey, retry: false } });
-  const campaignsQuery = useListAdminCampaigns({ query: { enabled: !!current.data && current.data.role === 'ADMIN', queryKey: getListAdminCampaignsQueryKey(), retry: false } });
+  const campaignsQuery = useListAdminCampaigns({ page: 1, search: '' }, { query: { enabled: !!current.data && current.data.role === 'ADMIN', queryKey: getListAdminCampaignsQueryKey({ page: 1, search: '' }), retry: false } });
   useEffect(() => {
     if (current.isError) setLocation('/login');
     else if (current.data && current.data.role !== 'ADMIN') setLocation('/dashboard');
@@ -215,13 +218,14 @@ export function AdminSubmissionsPage() {
   if (current.isError || current.data?.role !== 'ADMIN') return null;
   const submissions = submissionsQuery.data?.submissions ?? [];
   return <main className="min-h-[100dvh] bg-background"><SubmissionsHeader /><section className="mx-auto max-w-[1120px] px-5 py-8 sm:px-9 sm:py-12">
-    <div className="page-enter"><div className="eyebrow flex items-center gap-2 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Administrator workspace</div><div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><h1 className="serif text-4xl font-semibold tracking-[-.06em] sm:text-5xl">Project submissions.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Review the delivered work. Only the current submitted attempt can receive a decision.</p></div><span data-testid="text-admin-submission-count" className="rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold text-muted-foreground">{submissions.length} {submissions.length === 1 ? 'submission' : 'submissions'}</span></div></div>
-    <div data-testid="panel-submission-filters" className="mt-6 grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2"><label className="text-xs font-semibold">Campaign<select value={campaignId} onChange={event => setCampaignId(event.target.value)} data-testid="select-submission-campaign" className="field mt-1.5 !py-2.5"><option value="">All campaigns</option>{(campaignsQuery.data?.campaigns ?? []).map(campaign => <option key={campaign.id} value={campaign.id}>{campaign.title}</option>)}</select></label><label className="text-xs font-semibold">Status<select value={status} onChange={event => setStatus(event.target.value)} data-testid="select-submission-status" className="field mt-1.5 !py-2.5"><option value="">All statuses</option><option value="SUBMITTED">Submitted</option><option value="SUBMISSION_ACCEPTED">Submission accepted</option><option value="SUBMISSION_REJECTED">Submission rejected</option></select></label></div>
+     <div className="page-enter"><div className="eyebrow flex items-center gap-2 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Administrator workspace</div><div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><h1 className="serif text-4xl font-semibold tracking-[-.06em] sm:text-5xl">Project submissions.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Review the delivered work. Only the current submitted attempt can receive a decision.</p></div><span data-testid="text-admin-submission-count" className="rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold text-muted-foreground">{submissionsQuery.isLoading ? 'Loading submissions' : `${submissionsQuery.data?.pagination.total ?? submissions.length} ${submissionsQuery.data?.pagination.total === 1 ? 'submission' : 'submissions'}`}</span></div></div>
+     <div data-testid="panel-submission-filters" className="mt-6 grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3"><label className="text-xs font-semibold">Campaign<select value={campaignId} onChange={event => { setCampaignId(event.target.value); setPage(1); }} data-testid="select-submission-campaign" className="field mt-1.5 !py-2.5"><option value="">All campaigns</option>{(campaignsQuery.data?.campaigns ?? []).map(campaign => <option key={campaign.id} value={campaign.id}>{campaign.title}</option>)}</select></label><label className="text-xs font-semibold">Status<select value={status} onChange={event => { setStatus(event.target.value); setPage(1); }} data-testid="select-submission-status" className="field mt-1.5 !py-2.5"><option value="">All statuses</option><option value="SUBMITTED">Submitted</option><option value="SUBMISSION_ACCEPTED">Submission accepted</option><option value="SUBMISSION_REJECTED">Submission rejected</option></select></label><label className="text-xs font-semibold">Search<input value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} maxLength={100} className="field mt-1.5" placeholder="Creator, title or campaign" /></label></div>
     {submissionsQuery.isLoading ? <div data-testid="loading-admin-submissions" className="mt-6 space-y-3">{[0, 1, 2].map(item => <div key={item} className="h-52 animate-pulse rounded-[22px] bg-muted" />)}</div>
       : submissionsQuery.isError ? <div role="alert" data-testid="status-admin-submissions-error" className="mt-6 rounded-2xl border border-[#e3c2bb] bg-card p-6"><p className="text-sm font-semibold text-[#8f463d]">Submissions couldn’t be loaded.</p><p className="mt-1 text-xs text-muted-foreground">{errorText(submissionsQuery.error)}</p><button type="button" onClick={() => submissionsQuery.refetch()} data-testid="button-retry-admin-submissions" className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Try again</button></div>
       : !submissions.length ? <div data-testid="empty-admin-submissions" className="mt-6 rounded-[24px] border border-dashed border-border bg-card/70 px-6 py-14 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><ShieldCheck size={20} /></div><div className="eyebrow mt-5 text-primary">Nothing to review</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">The submission queue is clear.</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Submitted creator projects will appear here.</p></div>
       : <div data-testid="list-admin-submissions" className="mt-6 space-y-3">{submissions.map(submission => <AdminSubmissionCard key={submission.id} submission={submission} />)}</div>}
-  </section><footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">Tech Sponsor Network · Project submissions</footer></main>;
+     <ListPagination pagination={submissionsQuery.data?.pagination} onPageChange={setPage} className="mt-5" />
+   </section><footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">Tech Sponsor Network · Project submissions</footer></main>;
 }
 
 function SubmissionsHeader() {

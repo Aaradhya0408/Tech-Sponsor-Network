@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import {
   ListAdminCampaignApplicationsResponse,
   UpdateAdminCampaignApplicationDecisionBody,
@@ -19,6 +19,8 @@ import {
 import { Router, type IRouter, type Response } from "express";
 import { requireRole } from "./auth";
 import { notifyApplicationDecision } from "../lib/email-events";
+import { escapeLike, LIST_PAGE_SIZE, paginationFor, readListQuery } from "../lib/list-query";
+import { sanitizePlainText } from "../lib/sanitize-text";
 
 const router: IRouter = Router();
 type UserRecord = typeof usersTable.$inferSelect;
@@ -34,8 +36,35 @@ function adminUserFrom(res: Response): UserRecord {
 router.get(
   "/admin/applications",
   requireRole("ADMIN"),
-  async (_req, res): Promise<void> => {
-    const rows = await db
+  async (req, res): Promise<void> => {
+    const list = readListQuery(req, res);
+    if (!list) return;
+    const search = list.search ? `%${escapeLike(list.search)}%` : null;
+    const where = search
+      ? or(
+          ilike(campaignsTable.title, search),
+          ilike(creatorProfilesTable.displayName, search),
+          ilike(creatorProfilesTable.country, search),
+          ilike(creatorProfilesTable.niche, search),
+          ilike(campaignApplicationsTable.personalMessage, search),
+          ilike(campaignApplicationsTable.status, search),
+        )
+      : undefined;
+    const countQuery = db
+      .select({ total: count() })
+      .from(campaignApplicationsTable)
+      .innerJoin(
+        campaignsTable,
+        eq(campaignApplicationsTable.campaignId, campaignsTable.id),
+      )
+      .innerJoin(
+        creatorProfilesTable,
+        eq(campaignApplicationsTable.creatorId, creatorProfilesTable.userId),
+      );
+    const [{ total }] = where
+      ? await countQuery.where(where)
+      : await countQuery;
+    const selection = db
       .select({
         application: campaignApplicationsTable,
         campaignTitle: campaignsTable.title,
@@ -49,14 +78,19 @@ router.get(
         eq(campaignApplicationsTable.campaignId, campaignsTable.id),
       )
       .innerJoin(
-        usersTable,
-        eq(campaignApplicationsTable.creatorId, usersTable.id),
-      )
-      .innerJoin(
         creatorProfilesTable,
         eq(campaignApplicationsTable.creatorId, creatorProfilesTable.userId),
-      )
-      .orderBy(asc(campaignsTable.title), desc(campaignApplicationsTable.createdAt));
+      );
+    const rows = where
+      ? await selection
+          .where(where)
+          .orderBy(asc(campaignsTable.title), desc(campaignApplicationsTable.createdAt))
+          .limit(LIST_PAGE_SIZE)
+          .offset(list.offset)
+      : await selection
+          .orderBy(asc(campaignsTable.title), desc(campaignApplicationsTable.createdAt))
+          .limit(LIST_PAGE_SIZE)
+          .offset(list.offset);
 
     const applicationIds = rows.map(({ application }) => application.id);
     const creatorIds = [...new Set(rows.map(({ application }) => application.creatorId))];
@@ -172,6 +206,7 @@ router.get(
             };
           },
         ),
+        pagination: paginationFor(list.page, total),
       }),
     );
   },
@@ -191,8 +226,8 @@ router.patch(
     }
 
     const { status } = body.data;
-    const note = body.data.note?.trim() ?? "";
-    const changeReason = body.data.changeReason?.trim() ?? "";
+    const note = sanitizePlainText(body.data.note ?? "", 500);
+    const changeReason = sanitizePlainText(body.data.changeReason ?? "", 500);
     const rejectionReason = body.data.rejectionReason ?? null;
 
     if (status === "NOT_SELECTED") {

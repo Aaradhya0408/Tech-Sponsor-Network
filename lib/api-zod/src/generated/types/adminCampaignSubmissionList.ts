@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminCampaignSubmission } from './adminCampaignSubmission';
+import type { Pagination } from './pagination';
 
 export interface AdminCampaignSubmissionList {
   submissions: AdminCampaignSubmission[];
+  pagination: Pagination;
 }

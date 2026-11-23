@@ -11,7 +11,8 @@ import {
 } from "@workspace/db";
 import { campaignEligibilityReasons } from "./campaign-eligibility";
 import { campaignAlertUnsubscribeToken } from "./campaign-alert-token";
-import { sendEmail } from "./email";
+import { sendEmail, type SendEmailInput } from "./email";
+import { enqueueEmails } from "./email-queue";
 import { appUrl, renderTransactionalEmail } from "./email-template";
 
 const rejectionReasonLabels: Record<string, string> = {
@@ -285,6 +286,7 @@ export async function notifyEligibleCreatorsOfCampaign(
     platformsByCreator.set(platform.userId, list);
   }
 
+  const messages: SendEmailInput[] = [];
   for (const candidate of candidates) {
     const profile = candidate.profile;
     const platforms = platformsByCreator.get(profile.userId) ?? [];
@@ -302,7 +304,7 @@ export async function notifyEligibleCreatorsOfCampaign(
     unsubscribeUrl.searchParams.set("userId", profile.userId);
     unsubscribeUrl.searchParams.set("token", token);
 
-    await sendEmail({
+    messages.push({
       to: candidate.email,
       type: "NEW_CAMPAIGN_ALERT",
       subject: `A new campaign matches your profile: ${campaign.title}`,
@@ -317,4 +319,5 @@ export async function notifyEligibleCreatorsOfCampaign(
       }),
     });
   }
+  enqueueEmails(messages);
 }

@@ -25,3 +25,4 @@ export * from "./campaign-application-decisions";
 export * from "./campaign-submissions";
 export * from "./invoices";
 export * from "./email-log";
+export * from "./rate-limit";

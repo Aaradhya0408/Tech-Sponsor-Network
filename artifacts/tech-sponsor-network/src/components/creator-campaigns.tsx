@@ -23,6 +23,7 @@ import { COUNTRY_OPTIONS } from '@/lib/countries';
 import { Form } from '@/components/ui/form';
 import { ResponsiveNav } from '@/components/responsive-nav';
 import { CreatorProjectLifecycle } from '@/components/project-submissions';
+import { ListPagination } from '@/components/list-pagination';
 
 function messageOf(error: unknown) {
   if (error && typeof error === 'object' && 'message' in error) {
@@ -174,8 +175,10 @@ export function CampaignDiscovery() {
   const [, setLocation] = useLocation();
   const current = useGetCurrentUser({ query: { queryKey: getGetCurrentUserQueryKey(), retry: false } });
   const profileQuery = useGetCreatorProfile({ query: { queryKey: getGetCreatorProfileQueryKey(), enabled: !!current.data && current.data.role === 'CREATOR', retry: false } });
-  const campaignsQuery = useListCreatorCampaigns({ query: { queryKey: getListCreatorCampaignsQueryKey(), enabled: !!current.data && current.data.role === 'CREATOR', retry: false } });
-  const applicationsQuery = useListCreatorApplications({ query: { queryKey: getListCreatorApplicationsQueryKey(), enabled: !!current.data && current.data.role === 'CREATOR', retry: false } });
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const listParams = { page, search };
+  const campaignsQuery = useListCreatorCampaigns(listParams, { query: { queryKey: getListCreatorCampaignsQueryKey(listParams), enabled: !!current.data && current.data.role === 'CREATOR', retry: false } });
   const [niche, setNiche] = useState('All niches');
   const [platform, setPlatform] = useState('All platforms');
   const [country, setCountry] = useState('All countries');
@@ -183,7 +186,6 @@ export function CampaignDiscovery() {
   const [eligibleOnly, setEligibleOnly] = useState(false);
   const campaigns = campaignsQuery.data?.campaigns ?? [];
   const profile = profileQuery.data;
-  const appliedCampaignIds = useMemo(() => new Set((applicationsQuery.data?.applications ?? []).map(application => application.campaignId)), [applicationsQuery.data?.applications]);
   useEffect(() => { if (current.isError) setLocation('/login'); }, [current.isError, setLocation]);
   const todayUtc = new Date().toISOString().slice(0, 10);
   const published = useMemo(() => campaigns.filter(campaign => campaign.status === 'PUBLISHED' && campaign.deadline >= todayUtc), [campaigns, todayUtc]);
@@ -217,7 +219,8 @@ export function CampaignDiscovery() {
       {profile?.approvalStatus === 'PENDING_APPROVAL' && <div className="mt-6 flex gap-3 rounded-2xl border border-[#e2d2b8] bg-[#f4eddf] p-4" data-testid="notice-profile-pending"><BadgeCheck size={18} className="mt-0.5 shrink-0 text-[#805a36]" /><p className="text-sm leading-6 text-[#664b30]"><strong>Profile under review.</strong> Browse all opportunities now; personalized eligibility will appear after approval.</p></div>}
       <div className="mt-7 rounded-[22px] border border-border/80 bg-card p-4 shadow-[0_15px_38px_-35px_rgba(36,52,43,.35)] sm:p-5" data-testid="panel-campaign-filters">
         <div className="mb-3 flex items-center gap-2"><Filter size={15} className="text-primary" /><p className="eyebrow text-muted-foreground">Refine the board</p></div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_auto]">
+          <label><span className="sr-only">Search campaigns</span><input className="field" maxLength={100} value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Search campaigns" /></label>
           <label><span className="sr-only">Filter by niche</span><select data-testid="select-campaign-niche" className="field !py-2.5" value={niche} onChange={event => setNiche(event.target.value)}>{nicheOptions.map(item => <option key={item}>{item}</option>)}</select></label>
           <label><span className="sr-only">Filter by platform</span><select data-testid="select-campaign-platform" className="field !py-2.5" value={platform} onChange={event => setPlatform(event.target.value)}>{platformOptions.map(item => <option key={item}>{item}</option>)}</select></label>
           <label><span className="sr-only">Filter by country</span><select data-testid="select-campaign-country" className="field !py-2.5" value={country} onChange={event => setCountry(event.target.value)}><option>All countries</option>{COUNTRY_OPTIONS.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
@@ -230,7 +233,8 @@ export function CampaignDiscovery() {
       {campaignsQuery.isLoading ? <LoadingBlock /> : campaignsQuery.isError ? <div className="mt-8 rounded-[22px] border border-[#e3c2bb] bg-card p-6" data-testid="status-campaign-list-error"><p className="text-sm font-semibold text-[#8f463d]">Opportunities couldn’t be loaded.</p><p className="mt-1 text-xs text-muted-foreground">{messageOf(campaignsQuery.error)}</p><button type="button" onClick={() => campaignsQuery.refetch()} data-testid="button-retry-creator-campaigns" className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Try again</button></div>
         : campaigns.length === 0 || published.length === 0 ? <div className="mt-8 rounded-[22px] border border-dashed border-border bg-card/70 px-6 py-14 text-center" data-testid="empty-creator-campaigns"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><Search size={20} /></div><div className="eyebrow mt-5 text-primary">The board is quiet</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">No live campaigns right now.</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">New opportunities will show here when they open.</p><button type="button" onClick={() => campaignsQuery.refetch()} className="mt-5 inline-flex min-h-11 items-center rounded-full border border-border px-5 py-3 text-sm font-semibold text-primary hover:bg-muted">Refresh campaigns</button></div>
         : !visible.length ? <div className="mt-8 rounded-[22px] border border-dashed border-border bg-card/70 px-6 py-12 text-center" data-testid="empty-filtered-campaigns"><div className="eyebrow text-primary">No matches this time</div><h2 className="serif mt-2 text-xl font-semibold">Try a wider selection.</h2><p className="mt-1 text-sm text-muted-foreground">Adjust the filters to see more opportunities.</p><button type="button" onClick={() => { setNiche('All niches'); setPlatform('All platforms'); setCountry('All countries'); setEligibleOnly(false); }} className="mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">Clear filters</button></div>
-         : <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="list-creator-campaigns">{visible.map(campaign => <CampaignCard key={campaign.id} campaign={campaign} profile={profile} applied={appliedCampaignIds.has(campaign.id)} />)}</div>}
+          : <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="list-creator-campaigns">{visible.map(campaign => <CampaignCard key={campaign.id} campaign={campaign} profile={profile} applied={campaign.hasApplied === true} />)}</div>}
+      <ListPagination pagination={campaignsQuery.data?.pagination} onPageChange={setPage} className="mt-5" />
     </section>
     <footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">Tech Sponsor Network <span className="px-2">·</span> Creator opportunity board</footer>
   </main>;
@@ -243,7 +247,8 @@ export function CreatorCampaignDetail() {
   const current = useGetCurrentUser({ query: { queryKey: getGetCurrentUserQueryKey(), retry: false } });
   const profileQuery = useGetCreatorProfile({ query: { queryKey: getGetCreatorProfileQueryKey(), enabled: !!current.data && current.data.role === 'CREATOR', retry: false } });
   const campaignQuery = useGetCreatorCampaign(id, { query: { queryKey: getGetCreatorCampaignQueryKey(id), enabled: !!id && !!current.data && current.data.role === 'CREATOR', retry: false } });
-  const applicationsQuery = useListCreatorApplications({ query: { queryKey: getListCreatorApplicationsQueryKey(), enabled: !!current.data && current.data.role === 'CREATOR', retry: false } });
+  const applicationParams = { campaignId: id, page: 1, search: '' };
+  const applicationsQuery = useListCreatorApplications(applicationParams, { query: { queryKey: getListCreatorApplicationsQueryKey(applicationParams), enabled: !!id && !!current.data && current.data.role === 'CREATOR', retry: false } });
   useEffect(() => { if (current.isError) setLocation('/login'); }, [current.isError, setLocation]);
   if (current.isError) return null;
   if (current.isLoading || !current.data) return <LoadingBlock />;
@@ -311,8 +316,8 @@ function ApplicationForm({ campaignId, campaignTitle }: { campaignId: string; ca
     apply.mutate({ campaignId, data }, {
       onSuccess: () => {
         setSuccess(`Application submitted. Your application for ${campaignTitle} is now under review. We will email you when there is an update.`);
-        void queryClient.invalidateQueries({ queryKey: getListCreatorApplicationsQueryKey() });
-        void queryClient.invalidateQueries({ queryKey: getListCreatorCampaignsQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getListCreatorApplicationsQueryKey({ campaignId, page: 1, search: '' }) });
+        void queryClient.invalidateQueries({ predicate: query => String(query.queryKey[0] ?? '').startsWith('/api/creator/campaigns') });
         void queryClient.invalidateQueries({ queryKey: getGetCreatorCampaignQueryKey(campaignId) });
       },
       onError: mutationError => setError(messageOf(mutationError)),

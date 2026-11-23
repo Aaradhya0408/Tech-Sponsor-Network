@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import {
   CreateAdminCampaignBody,
   CreateAdminCampaignResponse,
@@ -18,6 +18,8 @@ import {
 import { Router, type IRouter, type Response } from "express";
 import { requireRole } from "./auth";
 import { notifyEligibleCreatorsOfCampaign } from "../lib/email-events";
+import { escapeLike, LIST_PAGE_SIZE, paginationFor, readListQuery } from "../lib/list-query";
+import { sanitizePlainText } from "../lib/sanitize-text";
 
 const router: IRouter = Router();
 
@@ -195,11 +197,11 @@ function campaignValues(input: {
   niches: (typeof campaignsTable.$inferInsert)["niches"];
 }) {
   return {
-    title: input.title.trim(),
-    organizerName: input.organizerName.trim(),
-    shortDescription: input.shortDescription.trim(),
-    objectives: input.objectives.trim(),
-    contentRequirements: input.contentRequirements.trim(),
+    title: sanitizePlainText(input.title, 160),
+    organizerName: sanitizePlainText(input.organizerName, 120),
+    shortDescription: sanitizePlainText(input.shortDescription, 500),
+    objectives: sanitizePlainText(input.objectives, 3000),
+    contentRequirements: sanitizePlainText(input.contentRequirements, 5000),
     rewardAmount: input.rewardAmount.toFixed(2),
     currency: (input.currency ?? "USD").trim().toUpperCase(),
     deadline: input.deadline,
@@ -214,14 +216,38 @@ router.get(
   "/admin/campaigns",
   requireRole("ADMIN"),
   async (req, res): Promise<void> => {
-    const campaigns = await db
-      .select()
-      .from(campaignsTable)
-      .orderBy(desc(campaignsTable.createdAt));
+    const list = readListQuery(req, res);
+    if (!list) return;
+    const search = list.search ? `%${escapeLike(list.search)}%` : null;
+    const where = search
+      ? or(
+          ilike(campaignsTable.title, search),
+          ilike(campaignsTable.organizerName, search),
+          ilike(campaignsTable.shortDescription, search),
+        )
+      : undefined;
+    const [{ total }] = where
+      ? await db.select({ total: count() }).from(campaignsTable).where(where)
+      : await db.select({ total: count() }).from(campaignsTable);
+    const campaigns = where
+      ? await db
+          .select()
+          .from(campaignsTable)
+          .where(where)
+          .orderBy(desc(campaignsTable.createdAt))
+          .limit(LIST_PAGE_SIZE)
+          .offset(list.offset)
+      : await db
+          .select()
+          .from(campaignsTable)
+          .orderBy(desc(campaignsTable.createdAt))
+          .limit(LIST_PAGE_SIZE)
+          .offset(list.offset);
 
     res.json(
       ListAdminCampaignsResponse.parse({
         campaigns: campaigns.map(campaignResponse),
+        pagination: paginationFor(list.page, total),
       }),
     );
   },

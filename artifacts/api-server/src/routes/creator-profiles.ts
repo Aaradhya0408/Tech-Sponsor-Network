@@ -2,9 +2,13 @@ import { randomInt, randomUUID } from "node:crypto";
 import {
   and,
   asc,
+  count,
   eq,
+  ilike,
   inArray,
+  isNull,
   notInArray,
+  or,
   sql,
 } from "drizzle-orm";
 import {
@@ -28,6 +32,8 @@ import {
 } from "@workspace/db";
 import { Router, type IRouter, type Response } from "express";
 import { requireRole } from "./auth";
+import { escapeLike, LIST_PAGE_SIZE, paginationFor, readListQuery } from "../lib/list-query";
+import { sanitizePlainText } from "../lib/sanitize-text";
 
 const router: IRouter = Router();
 type UserRecord = typeof usersTable.$inferSelect;
@@ -147,7 +153,7 @@ async function ensureCreatorProfile(user: UserRecord): Promise<ProfileRecord> {
       .insert(creatorProfilesTable)
       .values({
         userId: user.id,
-        displayName: user.name.trim() || "Creator",
+        displayName: sanitizePlainText(user.name, 120) || "Creator",
         proofCode,
       })
       .onConflictDoNothing();
@@ -195,8 +201,8 @@ router.put(
       return;
     }
 
-    const displayName = parsed.data.displayName.trim();
-    const bio = parsed.data.bio.trim();
+    const displayName = sanitizePlainText(parsed.data.displayName, 120);
+    const bio = sanitizePlainText(parsed.data.bio, 300);
     if (!displayName) {
       error(res, 400, "Display name is required.");
       return;
@@ -293,7 +299,10 @@ router.put(
               eq(creatorPlatformsTable.userId, user.id),
               notInArray(
                 creatorPlatformsTable.platform,
-                parsed.data.platforms.map((item) => item.platform),
+                parsed.data.platforms.map(
+                  (item: { platform: (typeof CREATOR_PLATFORMS)[number] }) =>
+                    item.platform,
+                ),
               ),
             ),
           );
@@ -317,12 +326,63 @@ router.put(
 router.get(
   "/admin/creator-profiles",
   requireRole("ADMIN"),
-  async (_req, res): Promise<void> => {
-    const creators = await db
-      .select()
+  async (req, res): Promise<void> => {
+    const list = readListQuery(req, res);
+    if (!list) return;
+    const rawStatus = req.query.approvalStatus;
+    const approvalStatuses = [
+      "PENDING_APPROVAL",
+      "APPROVED",
+      "REJECTED",
+    ] as const;
+    if (
+      rawStatus !== undefined &&
+      (typeof rawStatus !== "string" ||
+        !approvalStatuses.includes(
+          rawStatus as (typeof approvalStatuses)[number],
+        ))
+    ) {
+      error(res, 400, "Choose a valid profile status.");
+      return;
+    }
+    const search = list.search ? `%${escapeLike(list.search)}%` : null;
+    const conditions = [eq(usersTable.role, "CREATOR")];
+    if (typeof rawStatus === "string") {
+      conditions.push(
+        rawStatus === "PENDING_APPROVAL"
+          ? or(
+              eq(creatorProfilesTable.approvalStatus, "PENDING_APPROVAL"),
+              isNull(creatorProfilesTable.userId),
+            )!
+          : eq(creatorProfilesTable.approvalStatus, rawStatus as (typeof approvalStatuses)[number]),
+      );
+    }
+    if (search) {
+      conditions.push(
+        or(ilike(usersTable.name, search), ilike(usersTable.email, search))!,
+      );
+    }
+    const where = and(...conditions);
+    const [{ total }] = await db
+      .select({ total: count() })
       .from(usersTable)
-      .where(eq(usersTable.role, "CREATOR"))
-      .orderBy(asc(usersTable.createdAt));
+      .leftJoin(
+        creatorProfilesTable,
+        eq(creatorProfilesTable.userId, usersTable.id),
+      )
+      .where(where);
+    const creatorRows = await db
+      .select({ user: usersTable })
+      .from(usersTable)
+      .leftJoin(
+        creatorProfilesTable,
+        eq(creatorProfilesTable.userId, usersTable.id),
+      )
+      .where(where)
+      .orderBy(asc(usersTable.createdAt))
+      .limit(LIST_PAGE_SIZE)
+      .offset(list.offset);
+    const creators = creatorRows.map((row) => row.user);
 
     const profiles = await Promise.all(
       creators.map((creator) => ensureCreatorProfile(creator)),
@@ -356,6 +416,7 @@ router.get(
           platformsByUserId.get(creator.id) ?? [],
         );
       }),
+      pagination: paginationFor(list.page, total),
     };
 
     res.json(ListAdminCreatorProfilesResponse.parse(response));
@@ -373,7 +434,7 @@ router.patch(
       return;
     }
 
-    const reason = body.data.reason?.trim() ?? "";
+    const reason = sanitizePlainText(body.data.reason ?? "", 300);
     if (body.data.status === "REJECTED" && !reason) {
       error(res, 400, "Add a short reason when rejecting a profile.");
       return;

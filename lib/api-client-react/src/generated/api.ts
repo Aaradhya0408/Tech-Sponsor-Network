@@ -54,7 +54,15 @@ import type {
   InvoiceTerms,
   InvoiceUploadInput,
   InvoiceUploadResult,
+  ListAdminCampaignApplicationsParams,
   ListAdminCampaignSubmissionsParams,
+  ListAdminCampaignsParams,
+  ListAdminCreatorProfilesParams,
+  ListAdminEmailLogParams,
+  ListAdminInvoicesParams,
+  ListCreatorApplicationsParams,
+  ListCreatorCampaignsParams,
+  ListCreatorInvoicesParams,
   LoginInput,
   PasswordResetInput,
   PasswordResetRequestInput,
@@ -1175,20 +1183,27 @@ export const useUpdateCreatorProfile = <TError = ErrorType<ErrorResponse>,
       return useMutation(getUpdateCreatorProfileMutationOptions(options));
     }
 
-export const getListAdminCreatorProfilesUrl = () => {
+export const getListAdminCreatorProfilesUrl = (params?: ListAdminCreatorProfilesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/admin/creator-profiles`
+  return stringifiedParams.length > 0 ? `/api/admin/creator-profiles?${stringifiedParams}` : `/api/admin/creator-profiles`
 }
 
 /**
  * @summary List all creator profiles for review
  */
-export const listAdminCreatorProfiles = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCreatorProfiles> => {
+export const listAdminCreatorProfiles = async (params?: ListAdminCreatorProfilesParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminCreatorProfiles> => {
 
-  return customFetch<AdminCreatorProfiles>(getListAdminCreatorProfilesUrl(),
+  return customFetch<AdminCreatorProfiles>(getListAdminCreatorProfilesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1201,23 +1216,23 @@ export const listAdminCreatorProfiles = async ( options?: Parameters<typeof cust
 
 
 
-export const getListAdminCreatorProfilesQueryKey = () => {
+export const getListAdminCreatorProfilesQueryKey = (params?: ListAdminCreatorProfilesParams,) => {
     return [
-    `/api/admin/creator-profiles`
+    `/api/admin/creator-profiles`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListAdminCreatorProfilesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListAdminCreatorProfilesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError = ErrorType<ErrorResponse>>(params?: ListAdminCreatorProfilesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListAdminCreatorProfilesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListAdminCreatorProfilesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCreatorProfiles>>> = ({ signal }) => listAdminCreatorProfiles({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCreatorProfiles>>> = ({ signal }) => listAdminCreatorProfiles(params, { signal, ...requestOptions });
 
 
 
@@ -1235,11 +1250,11 @@ export type ListAdminCreatorProfilesQueryError = ErrorType<ErrorResponse>
  */
 
 export function useListAdminCreatorProfiles<TData = Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListAdminCreatorProfilesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCreatorProfiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListAdminCreatorProfilesQueryOptions(options)
+  const queryOptions = getListAdminCreatorProfilesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1432,20 +1447,27 @@ export const useUpdateCreatorPlatformVerification = <TError = ErrorType<ErrorRes
       return useMutation(getUpdateCreatorPlatformVerificationMutationOptions(options));
     }
 
-export const getListCreatorCampaignsUrl = () => {
+export const getListCreatorCampaignsUrl = (params?: ListCreatorCampaignsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/creator/campaigns`
+  return stringifiedParams.length > 0 ? `/api/creator/campaigns?${stringifiedParams}` : `/api/creator/campaigns`
 }
 
 /**
  * @summary List published campaigns available to creators
  */
-export const listCreatorCampaigns = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignList> => {
+export const listCreatorCampaigns = async (params?: ListCreatorCampaignsParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignList> => {
 
-  return customFetch<AdminCampaignList>(getListCreatorCampaignsUrl(),
+  return customFetch<AdminCampaignList>(getListCreatorCampaignsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1458,23 +1480,23 @@ export const listCreatorCampaigns = async ( options?: Parameters<typeof customFe
 
 
 
-export const getListCreatorCampaignsQueryKey = () => {
+export const getListCreatorCampaignsQueryKey = (params?: ListCreatorCampaignsParams,) => {
     return [
-    `/api/creator/campaigns`
+    `/api/creator/campaigns`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListCreatorCampaignsQueryOptions = <TData = Awaited<ReturnType<typeof listCreatorCampaigns>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListCreatorCampaignsQueryOptions = <TData = Awaited<ReturnType<typeof listCreatorCampaigns>>, TError = ErrorType<ErrorResponse>>(params?: ListCreatorCampaignsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListCreatorCampaignsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListCreatorCampaignsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCreatorCampaigns>>> = ({ signal }) => listCreatorCampaigns({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCreatorCampaigns>>> = ({ signal }) => listCreatorCampaigns(params, { signal, ...requestOptions });
 
 
 
@@ -1492,11 +1514,11 @@ export type ListCreatorCampaignsQueryError = ErrorType<ErrorResponse>
  */
 
 export function useListCreatorCampaigns<TData = Awaited<ReturnType<typeof listCreatorCampaigns>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListCreatorCampaignsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListCreatorCampaignsQueryOptions(options)
+  const queryOptions = getListCreatorCampaignsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1586,20 +1608,27 @@ export function useGetCreatorCampaign<TData = Awaited<ReturnType<typeof getCreat
 
 
 
-export const getListCreatorApplicationsUrl = () => {
+export const getListCreatorApplicationsUrl = (params?: ListCreatorApplicationsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/creator/applications`
+  return stringifiedParams.length > 0 ? `/api/creator/applications?${stringifiedParams}` : `/api/creator/applications`
 }
 
 /**
  * @summary List the signed-in creator's campaign applications
  */
-export const listCreatorApplications = async ( options?: Parameters<typeof customFetch>[1]): Promise<CreatorCampaignApplicationList> => {
+export const listCreatorApplications = async (params?: ListCreatorApplicationsParams, options?: Parameters<typeof customFetch>[1]): Promise<CreatorCampaignApplicationList> => {
 
-  return customFetch<CreatorCampaignApplicationList>(getListCreatorApplicationsUrl(),
+  return customFetch<CreatorCampaignApplicationList>(getListCreatorApplicationsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1612,23 +1641,23 @@ export const listCreatorApplications = async ( options?: Parameters<typeof custo
 
 
 
-export const getListCreatorApplicationsQueryKey = () => {
+export const getListCreatorApplicationsQueryKey = (params?: ListCreatorApplicationsParams,) => {
     return [
-    `/api/creator/applications`
+    `/api/creator/applications`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListCreatorApplicationsQueryOptions = <TData = Awaited<ReturnType<typeof listCreatorApplications>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListCreatorApplicationsQueryOptions = <TData = Awaited<ReturnType<typeof listCreatorApplications>>, TError = ErrorType<ErrorResponse>>(params?: ListCreatorApplicationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListCreatorApplicationsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListCreatorApplicationsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCreatorApplications>>> = ({ signal }) => listCreatorApplications({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCreatorApplications>>> = ({ signal }) => listCreatorApplications(params, { signal, ...requestOptions });
 
 
 
@@ -1646,11 +1675,11 @@ export type ListCreatorApplicationsQueryError = ErrorType<ErrorResponse>
  */
 
 export function useListCreatorApplications<TData = Awaited<ReturnType<typeof listCreatorApplications>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListCreatorApplicationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListCreatorApplicationsQueryOptions(options)
+  const queryOptions = getListCreatorApplicationsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2332,21 +2361,28 @@ export function useGetAdminSubmissionCover<TData = Awaited<ReturnType<typeof get
 
 
 
-export const getListAdminCampaignApplicationsUrl = () => {
+export const getListAdminCampaignApplicationsUrl = (params?: ListAdminCampaignApplicationsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/admin/applications`
+  return stringifiedParams.length > 0 ? `/api/admin/applications?${stringifiedParams}` : `/api/admin/applications`
 }
 
 /**
  * Application records, creator profile details, and decision history for administrators.
  * @summary List campaign applications for administrators
  */
-export const listAdminCampaignApplications = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignApplicationList> => {
+export const listAdminCampaignApplications = async (params?: ListAdminCampaignApplicationsParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignApplicationList> => {
 
-  return customFetch<AdminCampaignApplicationList>(getListAdminCampaignApplicationsUrl(),
+  return customFetch<AdminCampaignApplicationList>(getListAdminCampaignApplicationsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2359,23 +2395,23 @@ export const listAdminCampaignApplications = async ( options?: Parameters<typeof
 
 
 
-export const getListAdminCampaignApplicationsQueryKey = () => {
+export const getListAdminCampaignApplicationsQueryKey = (params?: ListAdminCampaignApplicationsParams,) => {
     return [
-    `/api/admin/applications`
+    `/api/admin/applications`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListAdminCampaignApplicationsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListAdminCampaignApplicationsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError = ErrorType<ErrorResponse>>(params?: ListAdminCampaignApplicationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListAdminCampaignApplicationsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListAdminCampaignApplicationsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCampaignApplications>>> = ({ signal }) => listAdminCampaignApplications({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCampaignApplications>>> = ({ signal }) => listAdminCampaignApplications(params, { signal, ...requestOptions });
 
 
 
@@ -2393,11 +2429,11 @@ export type ListAdminCampaignApplicationsQueryError = ErrorType<ErrorResponse>
  */
 
 export function useListAdminCampaignApplications<TData = Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListAdminCampaignApplicationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaignApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListAdminCampaignApplicationsQueryOptions(options)
+  const queryOptions = getListAdminCampaignApplicationsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2500,20 +2536,27 @@ export const useUpdateAdminCampaignApplicationDecision = <TError = ErrorType<Err
       return useMutation(getUpdateAdminCampaignApplicationDecisionMutationOptions(options));
     }
 
-export const getListAdminCampaignsUrl = () => {
+export const getListAdminCampaignsUrl = (params?: ListAdminCampaignsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/admin/campaigns`
+  return stringifiedParams.length > 0 ? `/api/admin/campaigns?${stringifiedParams}` : `/api/admin/campaigns`
 }
 
 /**
  * @summary List campaigns for administrators
  */
-export const listAdminCampaigns = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignList> => {
+export const listAdminCampaigns = async (params?: ListAdminCampaignsParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignList> => {
 
-  return customFetch<AdminCampaignList>(getListAdminCampaignsUrl(),
+  return customFetch<AdminCampaignList>(getListAdminCampaignsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2526,23 +2569,23 @@ export const listAdminCampaigns = async ( options?: Parameters<typeof customFetc
 
 
 
-export const getListAdminCampaignsQueryKey = () => {
+export const getListAdminCampaignsQueryKey = (params?: ListAdminCampaignsParams,) => {
     return [
-    `/api/admin/campaigns`
+    `/api/admin/campaigns`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListAdminCampaignsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCampaigns>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListAdminCampaignsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCampaigns>>, TError = ErrorType<ErrorResponse>>(params?: ListAdminCampaignsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListAdminCampaignsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListAdminCampaignsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCampaigns>>> = ({ signal }) => listAdminCampaigns({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCampaigns>>> = ({ signal }) => listAdminCampaigns(params, { signal, ...requestOptions });
 
 
 
@@ -2560,11 +2603,11 @@ export type ListAdminCampaignsQueryError = ErrorType<ErrorResponse>
  */
 
 export function useListAdminCampaigns<TData = Awaited<ReturnType<typeof listAdminCampaigns>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListAdminCampaignsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListAdminCampaignsQueryOptions(options)
+  const queryOptions = getListAdminCampaignsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3098,20 +3141,27 @@ export const useCreateCreatorInvoice = <TError = ErrorType<ErrorResponse>,
       return useMutation(getCreateCreatorInvoiceMutationOptions(options));
     }
 
-export const getListCreatorInvoicesUrl = () => {
+export const getListCreatorInvoicesUrl = (params?: ListCreatorInvoicesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/creator/invoices`
+  return stringifiedParams.length > 0 ? `/api/creator/invoices?${stringifiedParams}` : `/api/creator/invoices`
 }
 
 /**
  * @summary List invoices belonging to the signed-in creator
  */
-export const listCreatorInvoices = async ( options?: Parameters<typeof customFetch>[1]): Promise<CreatorInvoiceList> => {
+export const listCreatorInvoices = async (params?: ListCreatorInvoicesParams, options?: Parameters<typeof customFetch>[1]): Promise<CreatorInvoiceList> => {
 
-  return customFetch<CreatorInvoiceList>(getListCreatorInvoicesUrl(),
+  return customFetch<CreatorInvoiceList>(getListCreatorInvoicesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -3124,23 +3174,23 @@ export const listCreatorInvoices = async ( options?: Parameters<typeof customFet
 
 
 
-export const getListCreatorInvoicesQueryKey = () => {
+export const getListCreatorInvoicesQueryKey = (params?: ListCreatorInvoicesParams,) => {
     return [
-    `/api/creator/invoices`
+    `/api/creator/invoices`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListCreatorInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof listCreatorInvoices>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListCreatorInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof listCreatorInvoices>>, TError = ErrorType<ErrorResponse>>(params?: ListCreatorInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListCreatorInvoicesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListCreatorInvoicesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCreatorInvoices>>> = ({ signal }) => listCreatorInvoices({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCreatorInvoices>>> = ({ signal }) => listCreatorInvoices(params, { signal, ...requestOptions });
 
 
 
@@ -3158,11 +3208,11 @@ export type ListCreatorInvoicesQueryError = ErrorType<ErrorResponse>
  */
 
 export function useListCreatorInvoices<TData = Awaited<ReturnType<typeof listCreatorInvoices>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListCreatorInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCreatorInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListCreatorInvoicesQueryOptions(options)
+  const queryOptions = getListCreatorInvoicesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3175,20 +3225,27 @@ export function useListCreatorInvoices<TData = Awaited<ReturnType<typeof listCre
 
 
 
-export const getListAdminInvoicesUrl = () => {
+export const getListAdminInvoicesUrl = (params?: ListAdminInvoicesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/admin/invoices`
+  return stringifiedParams.length > 0 ? `/api/admin/invoices?${stringifiedParams}` : `/api/admin/invoices`
 }
 
 /**
  * @summary List all submitted invoices for administrators
  */
-export const listAdminInvoices = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminInvoiceList> => {
+export const listAdminInvoices = async (params?: ListAdminInvoicesParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminInvoiceList> => {
 
-  return customFetch<AdminInvoiceList>(getListAdminInvoicesUrl(),
+  return customFetch<AdminInvoiceList>(getListAdminInvoicesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -3201,23 +3258,23 @@ export const listAdminInvoices = async ( options?: Parameters<typeof customFetch
 
 
 
-export const getListAdminInvoicesQueryKey = () => {
+export const getListAdminInvoicesQueryKey = (params?: ListAdminInvoicesParams,) => {
     return [
-    `/api/admin/invoices`
+    `/api/admin/invoices`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListAdminInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminInvoices>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListAdminInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminInvoices>>, TError = ErrorType<ErrorResponse>>(params?: ListAdminInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListAdminInvoicesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListAdminInvoicesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminInvoices>>> = ({ signal }) => listAdminInvoices({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminInvoices>>> = ({ signal }) => listAdminInvoices(params, { signal, ...requestOptions });
 
 
 
@@ -3235,11 +3292,11 @@ export type ListAdminInvoicesQueryError = ErrorType<ErrorResponse>
  */
 
 export function useListAdminInvoices<TData = Awaited<ReturnType<typeof listAdminInvoices>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListAdminInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListAdminInvoicesQueryOptions(options)
+  const queryOptions = getListAdminInvoicesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3341,20 +3398,27 @@ export const useMarkAdminInvoicePaid = <TError = ErrorType<ErrorResponse>,
       return useMutation(getMarkAdminInvoicePaidMutationOptions(options));
     }
 
-export const getListAdminEmailLogUrl = () => {
+export const getListAdminEmailLogUrl = (params?: ListAdminEmailLogParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/admin/email-log`
+  return stringifiedParams.length > 0 ? `/api/admin/email-log?${stringifiedParams}` : `/api/admin/email-log`
 }
 
 /**
  * @summary List the latest transactional email attempts
  */
-export const listAdminEmailLog = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminEmailLog> => {
+export const listAdminEmailLog = async (params?: ListAdminEmailLogParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminEmailLog> => {
 
-  return customFetch<AdminEmailLog>(getListAdminEmailLogUrl(),
+  return customFetch<AdminEmailLog>(getListAdminEmailLogUrl(params),
   {
     ...options,
     method: 'GET'
@@ -3367,23 +3431,23 @@ export const listAdminEmailLog = async ( options?: Parameters<typeof customFetch
 
 
 
-export const getListAdminEmailLogQueryKey = () => {
+export const getListAdminEmailLogQueryKey = (params?: ListAdminEmailLogParams,) => {
     return [
-    `/api/admin/email-log`
+    `/api/admin/email-log`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListAdminEmailLogQueryOptions = <TData = Awaited<ReturnType<typeof listAdminEmailLog>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminEmailLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListAdminEmailLogQueryOptions = <TData = Awaited<ReturnType<typeof listAdminEmailLog>>, TError = ErrorType<ErrorResponse>>(params?: ListAdminEmailLogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminEmailLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListAdminEmailLogQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListAdminEmailLogQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminEmailLog>>> = ({ signal }) => listAdminEmailLog({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminEmailLog>>> = ({ signal }) => listAdminEmailLog(params, { signal, ...requestOptions });
 
 
 
@@ -3401,11 +3465,11 @@ export type ListAdminEmailLogQueryError = ErrorType<ErrorResponse>
  */
 
 export function useListAdminEmailLog<TData = Awaited<ReturnType<typeof listAdminEmailLog>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminEmailLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListAdminEmailLogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminEmailLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListAdminEmailLogQueryOptions(options)
+  const queryOptions = getListAdminEmailLogQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

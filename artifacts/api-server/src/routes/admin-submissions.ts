@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import {
   ListAdminCampaignSubmissionsQueryParams,
   ListAdminCampaignSubmissionsResponse,
@@ -19,6 +19,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { notifySubmissionDecision } from "../lib/email-events";
 import { streamPrivateObject } from "../lib/private-invoice-storage";
 import { requireRole } from "./auth";
+import { escapeLike, LIST_PAGE_SIZE, paginationFor, readListQuery } from "../lib/list-query";
 
 const router: IRouter = Router();
 type UserRecord = typeof usersTable.$inferSelect;
@@ -144,6 +145,8 @@ router.get(
   "/admin/submissions",
   requireRole("ADMIN"),
   async (req, res): Promise<void> => {
+    const list = readListQuery(req, res);
+    if (!list) return;
     const query = ListAdminCampaignSubmissionsQueryParams.safeParse(req.query);
     if (!query.success) {
       error(res, 400, "Choose a valid campaign and submission status.");
@@ -157,6 +160,36 @@ router.get(
     if (query.data.status) {
       conditions.push(eq(campaignSubmissionsTable.status, query.data.status));
     }
+    if (list.search) {
+      const search = `%${escapeLike(list.search)}%`;
+      conditions.push(
+        or(
+          ilike(campaignsTable.title, search),
+          ilike(creatorProfilesTable.displayName, search),
+          ilike(campaignSubmissionsTable.title, search),
+          ilike(campaignSubmissionsTable.description, search),
+        )!,
+      );
+    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const countQuery = db
+      .select({ total: count() })
+      .from(campaignSubmissionsTable)
+      .innerJoin(
+        campaignApplicationsTable,
+        eq(campaignSubmissionsTable.applicationId, campaignApplicationsTable.id),
+      )
+      .innerJoin(
+        campaignsTable,
+        eq(campaignApplicationsTable.campaignId, campaignsTable.id),
+      )
+      .innerJoin(
+        creatorProfilesTable,
+        eq(campaignSubmissionsTable.creatorId, creatorProfilesTable.userId),
+      );
+    const [{ total }] = where
+      ? await countQuery.where(where)
+      : await countQuery;
     const selection = db
       .select({
         submission: campaignSubmissionsTable,
@@ -185,14 +218,16 @@ router.get(
         usersTable,
         eq(campaignSubmissionsTable.reviewedBy, usersTable.id),
       );
-    const rows = conditions.length
+    const rows = where
       ? await selection
-          .where(and(...conditions))
+          .where(where)
           .orderBy(asc(campaignsTable.title), desc(campaignSubmissionsTable.submittedAt))
+          .limit(LIST_PAGE_SIZE)
+          .offset(list.offset)
       : await selection.orderBy(
           asc(campaignsTable.title),
           desc(campaignSubmissionsTable.submittedAt),
-        );
+        ).limit(LIST_PAGE_SIZE).offset(list.offset);
     const applicationIds = [...new Set(rows.map(({ submission }) => submission.applicationId))];
     const creatorIds = [...new Set(rows.map(({ submission }) => submission.creatorId))];
     const [latestRows, platformRows] =
@@ -240,6 +275,7 @@ router.get(
             platformsByCreator.get(row.submission.creatorId) ?? [],
           ),
         ),
+        pagination: paginationFor(list.page, total),
       }),
     );
   },

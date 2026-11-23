@@ -26,6 +26,7 @@ export interface AdminCampaign {
   minimumFollowers: number;
   niches: CreatorNiche[];
   status: CampaignStatus;
+  hasApplied?: boolean;
   paymentRule: string;
   createdAt: Date;
   updatedAt: Date;

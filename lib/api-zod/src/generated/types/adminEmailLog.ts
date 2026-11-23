@@ -6,8 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminEmailLogEntry } from './adminEmailLogEntry';
+import type { Pagination } from './pagination';
 
 export interface AdminEmailLog {
-  /** @maxItems 100 */
+  /** @maxItems 20 */
   emails: AdminEmailLogEntry[];
+  pagination: Pagination;
 }

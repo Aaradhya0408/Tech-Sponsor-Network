@@ -29,15 +29,34 @@ async function findAvailablePort() {
 }
 
 test("signup, verification, profiles, campaigns, roles, and logout stay isolated", async () => {
-  assert.ok(process.env.DATABASE_URL, "DATABASE_URL is required for auth tests");
+  const testDatabaseUrl = process.env.TSN_TEST_DATABASE_URL;
+  assert.ok(
+    testDatabaseUrl,
+    "TSN_TEST_DATABASE_URL must point to a disposable test database.",
+  );
   assert.ok(process.env.SESSION_SECRET, "SESSION_SECRET is required for auth tests");
+  const testDatabaseName = decodeURIComponent(
+    new URL(testDatabaseUrl).pathname.replace(/^\/+/, ""),
+  );
+  assert.match(
+    testDatabaseName,
+    /(^|[-_])(test|testing|ci)([-_]|$)/i,
+    "Refusing to run tests unless the database name clearly identifies a test database.",
+  );
+  assert.notEqual(
+    testDatabaseUrl,
+    process.env.DATABASE_URL,
+    "The test database must not be the app's configured database.",
+  );
 
   const suffix = randomUUID();
   const creatorEmail = `auth-creator-${suffix}@example.test`;
   const adminEmail = `auth-admin-${suffix}@example.test`;
   const expiredEmail = `auth-expired-${suffix}@example.test`;
-  const testEmails = [creatorEmail, adminEmail, expiredEmail];
-  const db = new Pool({ connectionString: process.env.DATABASE_URL });
+  const signupLimitEmail = `signup-limit-${suffix}@example.test`;
+  const testEmails = [creatorEmail, adminEmail, expiredEmail, signupLimitEmail];
+  const db = new Pool({ connectionString: testDatabaseUrl });
+  await db.query("TRUNCATE TABLE tech_sponsor_rate_limit_buckets");
   const port = await findAvailablePort();
   const server = spawn(
     process.execPath,
@@ -46,8 +65,9 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       cwd: fileURLToPath(new URL("..", import.meta.url)),
       env: {
         ...process.env,
+        DATABASE_URL: testDatabaseUrl,
         ADMIN_EMAILS: adminEmail,
-        NODE_ENV: "production",
+        NODE_ENV: "test",
         PORT: String(port),
       },
       stdio: ["ignore", "pipe", "pipe"],
@@ -62,22 +82,7 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
   server.stderr.on("data", appendOutput);
 
   const baseUrl = `http://127.0.0.1:${port}/api`;
-  const verificationTokenFor = (email) => {
-    for (const line of output.split("\n")) {
-      try {
-        const event = JSON.parse(line);
-        if (
-          event.msg === "Email verification link (temporary development delivery)" &&
-          event.email === email
-        ) {
-          return new URL(event.verificationUrl).searchParams.get("verify");
-        }
-      } catch {
-        // Ignore startup and non-JSON output.
-      }
-    }
-    return null;
-  };
+  let requestCounter = 0;
 
   async function waitForServer() {
     for (let attempt = 0; attempt < 60; attempt += 1) {
@@ -95,12 +100,25 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     throw new Error("Auth test server did not become ready.");
   }
 
-  async function request(path, { method = "GET", body, cookie } = {}) {
+  async function request(
+    path,
+    {
+      method = "GET",
+      body,
+      cookie,
+      ip,
+      origin = `http://127.0.0.1:${port}`,
+    } = {},
+  ) {
+    requestCounter += 1;
+    const requestIp = ip ?? `198.51.${Math.floor(requestCounter / 250) % 250}.${(requestCounter % 250) + 1}`;
     const response = await fetch(`${baseUrl}${path}`, {
       method,
       headers: {
         ...(body ? { "content-type": "application/json" } : {}),
         ...(cookie ? { cookie } : {}),
+        ...(origin ? { origin } : {}),
+        "x-forwarded-for": requestIp,
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
@@ -121,22 +139,90 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
   }
 
   async function signup(email) {
+    const token = randomBytes(32).toString("base64url");
     const result = await request("/auth/signup", {
       method: "POST",
       body: { name: "Auth Test", email, password: "safe-test-password-123" },
     });
     assert.equal(result.response.status, 201);
-
-    for (let attempt = 0; attempt < 40; attempt += 1) {
-      const token = verificationTokenFor(email);
-      if (token) return token;
-      await delay(25);
-    }
-    throw new Error("Signup did not emit a verification link.");
+    assert.equal(result.body.verificationUrl, undefined);
+    const user = await db.query(
+      "SELECT id FROM tech_sponsor_users WHERE email = $1",
+      [email],
+    );
+    assert.equal(user.rows.length, 1);
+    await db.query(
+      "DELETE FROM tech_sponsor_verification_tokens WHERE user_id = $1",
+      [user.rows[0].id],
+    );
+    await db.query(
+      `INSERT INTO tech_sponsor_verification_tokens (token_hash, user_id, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '24 hours')`,
+      [hashToken(token), user.rows[0].id],
+    );
+    assert.equal(output.includes(token), false, "verification tokens must not appear in server logs");
+    return token;
   }
 
   try {
     await waitForServer();
+
+    const crossSiteRequest = await request("/auth/logout", {
+      method: "POST",
+      origin: "https://attacker.example",
+    });
+    assert.equal(crossSiteRequest.response.status, 403, "cross-origin cookie mutations are rejected");
+    const missingOriginRequest = await request("/auth/logout", {
+      method: "POST",
+      origin: null,
+    });
+    assert.equal(missingOriginRequest.response.status, 403, "cookie mutations without a verifiable origin are rejected");
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await request("/auth/signup", {
+        method: "POST",
+        body: {
+          name: "Rate Limit",
+          email: signupLimitEmail,
+          password: "safe-test-password-123",
+        },
+      });
+    }
+    const signupThrottled = await request("/auth/signup", {
+      method: "POST",
+      body: {
+        name: "Rate Limit",
+        email: signupLimitEmail,
+        password: "safe-test-password-123",
+      },
+    });
+    assert.equal(signupThrottled.response.status, 429, "signup is rate limited");
+
+    const loginLimitEmail = `login-limit-${suffix}@example.test`;
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await request("/auth/login", {
+        method: "POST",
+        body: { email: loginLimitEmail, password: "wrong-password" },
+      });
+    }
+    const loginThrottled = await request("/auth/login", {
+      method: "POST",
+      body: { email: loginLimitEmail, password: "wrong-password" },
+    });
+    assert.equal(loginThrottled.response.status, 429, "login is rate limited");
+
+    const resendLimitEmail = `resend-limit-${suffix}@example.test`;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await request("/auth/resend-verification", {
+        method: "POST",
+        body: { email: resendLimitEmail, password: "safe-test-password-123" },
+      });
+    }
+    const resendThrottled = await request("/auth/resend-verification", {
+      method: "POST",
+      body: { email: resendLimitEmail, password: "safe-test-password-123" },
+    });
+    assert.equal(resendThrottled.response.status, 429, "verification resend is rate limited");
 
     const creatorToken = await signup(creatorEmail);
     const adminToken = await signup(adminEmail);
@@ -181,16 +267,35 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     });
     assert.equal(reusedVerification.response.status, 400);
 
-    const expiredTokenHash = hashToken(expiredToken);
+    const rotatedVerification = await request("/auth/resend-verification", {
+      method: "POST",
+      body: { email: expiredEmail, password: "safe-test-password-123" },
+    });
+    assert.equal(rotatedVerification.response.status, 200);
+    const oldVerificationAfterResend = await request("/auth/verify", {
+      method: "POST",
+      body: { token: expiredToken },
+    });
+    assert.equal(oldVerificationAfterResend.response.status, 400);
+
+    const expiredReplacementToken = randomBytes(32).toString("base64url");
+    const expiredUser = await db.query(
+      "SELECT id FROM tech_sponsor_users WHERE email = $1",
+      [expiredEmail],
+    );
     await db.query(
-      `UPDATE tech_sponsor_verification_tokens
-       SET expires_at = NOW() - INTERVAL '1 second'
-       WHERE token_hash = $1`,
-      [expiredTokenHash],
+      `DELETE FROM tech_sponsor_verification_tokens WHERE user_id = $1`,
+      [expiredUser.rows[0].id],
+    );
+    const expiredTokenHash = hashToken(expiredReplacementToken);
+    await db.query(
+      `INSERT INTO tech_sponsor_verification_tokens (token_hash, user_id, expires_at)
+       VALUES ($1, $2, NOW() - INTERVAL '1 second')`,
+      [expiredTokenHash, expiredUser.rows[0].id],
     );
     const expiredVerification = await request("/auth/verify", {
       method: "POST",
-      body: { token: expiredToken },
+      body: { token: expiredReplacementToken },
     });
     assert.equal(expiredVerification.response.status, 400);
 
@@ -214,6 +319,12 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     assert.equal(creatorLogin.response.status, 200);
     assert.equal(creatorLogin.body.role, "CREATOR");
     assert.ok(creatorLogin.cookie, "successful login issues a session cookie");
+    const cookieHeader = creatorLogin.response.headers.get("set-cookie") ?? "";
+    assert.match(cookieHeader, /HttpOnly/i);
+    assert.match(cookieHeader, /SameSite=Lax/i);
+    assert.equal("passwordHash" in creatorLogin.body, false);
+    assert.equal("token" in creatorLogin.body, false);
+    assert.equal("password_hash" in creatorLogin.body, false);
 
     const creatorDashboard = await request("/auth/creator/dashboard", {
       cookie: creatorLogin.cookie,
@@ -308,6 +419,69 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     });
     assert.equal(adminLogin.response.status, 200);
     assert.equal(adminLogin.body.role, "ADMIN");
+    const productionPort = await findAvailablePort();
+    const productionServer = spawn(
+      process.execPath,
+      [fileURLToPath(new URL("../dist/index.mjs", import.meta.url))],
+      {
+        cwd: fileURLToPath(new URL("..", import.meta.url)),
+        env: {
+          ...process.env,
+          DATABASE_URL: testDatabaseUrl,
+          ADMIN_EMAILS: adminEmail,
+          NODE_ENV: "production",
+          PORT: String(productionPort),
+        },
+        stdio: ["ignore", "ignore", "ignore"],
+      },
+    );
+    try {
+      const productionBase = `http://127.0.0.1:${productionPort}/api`;
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        if (productionServer.exitCode !== null) {
+          throw new Error("Production-mode test server exited before becoming ready.");
+        }
+        try {
+          const health = await fetch(`${productionBase}/healthz`);
+          if (health.ok) break;
+        } catch {
+          // Wait for the production-mode listener.
+        }
+        await delay(100);
+      }
+      const productionLoginResponse = await fetch(
+        `${productionBase}/auth/login`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            email: adminEmail,
+            password: "safe-test-password-123",
+          }),
+        },
+      );
+      assert.equal(productionLoginResponse.status, 200);
+      const productionCookie = productionLoginResponse.headers.get("set-cookie") ?? "";
+      assert.match(productionCookie, /HttpOnly/i);
+      assert.match(productionCookie, /Secure/i);
+      assert.match(productionCookie, /SameSite=Lax/i);
+      const productionResetResponse = await fetch(
+        `${productionBase}/auth/password-reset/request`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email: `missing-${suffix}@example.test` }),
+        },
+      );
+      const productionResetBody = await productionResetResponse.json();
+      assert.equal(productionResetBody.resetUrl, undefined);
+      assert.equal(productionResetBody.verificationUrl, undefined);
+    } finally {
+      productionServer.kill("SIGTERM");
+      if (productionServer.exitCode === null) {
+        await once(productionServer, "exit").catch(() => {});
+      }
+    }
     const adminDashboard = await request("/auth/admin/dashboard", {
       cookie: adminLogin.cookie,
     });
@@ -597,10 +771,19 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     });
     assert.equal(adminToCreatorProfile.response.status, 403);
 
-    const creatorList = await request("/admin/creator-profiles", {
+    const creatorList = await request(
+      `/admin/creator-profiles?page=1&approvalStatus=PENDING_APPROVAL&search=${encodeURIComponent(creatorEmail)}`,
+      {
       cookie: adminLogin.cookie,
-    });
+      },
+    );
     assert.equal(creatorList.response.status, 200);
+    assert.equal(creatorList.body.pagination.pageSize, 20);
+    assert.ok(
+      creatorList.body.creators.every(
+        (item) => item.approvalStatus === "PENDING_APPROVAL",
+      ),
+    );
     const creatorRecord = creatorList.body.creators.find(
       (item) => item.email === creatorEmail,
     );
@@ -897,6 +1080,19 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       ),
       "creators can only list their own applications",
     );
+    assert.equal(
+      otherCreatorApplications.body.applications.some(
+        (item) => "email" in item || "creatorEmail" in item,
+      ),
+      false,
+      "creator application responses do not contain other users' emails",
+    );
+    assert.equal(otherCreatorApplications.body.pagination.pageSize, 20);
+    const invalidCreatorPage = await request(
+      "/creator/applications?page=0",
+      { cookie: creatorLogin.cookie },
+    );
+    assert.equal(invalidCreatorPage.response.status, 400);
     const adminCannotListCreatorApplications = await request(
       "/creator/applications",
       { cookie: adminLogin.cookie },
@@ -1135,6 +1331,32 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     assert.equal(firstProjectSubmission.body.attempt, 1);
     assert.equal(firstProjectSubmission.body.status, "SUBMITTED");
     assert.equal(firstProjectSubmission.body.coverUrl, null);
+    const leakedCoverPath = `private/test/${randomUUID()}`;
+    await db.query(
+      `UPDATE tech_sponsor_campaign_submissions
+       SET cover_object_path = $1, cover_content_type = 'image/jpeg'
+       WHERE id = $2`,
+      [leakedCoverPath, firstProjectSubmission.body.id],
+    );
+    const otherCreatorSubmissionCover = await request(
+      `/creator/submissions/${firstProjectSubmission.body.id}/cover`,
+      { cookie: otherCreatorLogin.cookie },
+    );
+    assert.equal(
+      otherCreatorSubmissionCover.response.status,
+      404,
+      "another creator cannot read a creator's private submission image",
+    );
+    const otherCreatorApplicationList = await request("/creator/applications", {
+      cookie: otherCreatorLogin.cookie,
+    });
+    assert.equal(
+      otherCreatorApplicationList.body.applications.some(
+        (item) => item.id === applicationId,
+      ),
+      false,
+      "creators only receive their own applications",
+    );
     const duplicateSubmission = await request(
       `/creator/applications/${applicationId}/submission`,
       {
@@ -1290,6 +1512,32 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     assert.equal(invoiceTermsAfterSubmissionAcceptance.response.status, 200);
     assert.equal(invoiceTermsAfterSubmissionAcceptance.body.rewardAmount, 120.5);
 
+    const creatorRecordForInvoice = await db.query(
+      "SELECT id FROM tech_sponsor_users WHERE email = $1",
+      [creatorEmail],
+    );
+    const seededInvoice = await db.query(
+      `INSERT INTO tech_sponsor_invoices
+        (application_id, creator_id, invoice_number, invoice_date, amount, currency, description, work_url, invoice_object_path, invoice_content_type, confirmed)
+       VALUES ($1, $2, $3, CURRENT_DATE, 1.00, 'USD', 'Access-control test invoice', 'https://example.test/work', $4, 'application/pdf', true)
+       RETURNING id`,
+      [
+        applicationId,
+        creatorRecordForInvoice.rows[0].id,
+        `TEST-${suffix}`,
+        `private/test/${randomUUID()}`,
+      ],
+    );
+    const otherCreatorInvoiceFile = await request(
+      `/creator/invoices/${seededInvoice.rows[0].id}/files/invoice`,
+      { cookie: otherCreatorLogin.cookie },
+    );
+    assert.equal(
+      otherCreatorInvoiceFile.response.status,
+      404,
+      "another creator cannot read a creator's private invoice file",
+    );
+
     const updatedAdminApplications = await request("/admin/applications", {
       cookie: adminLogin.cookie,
     });
@@ -1342,9 +1590,45 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
     );
     assert.equal(closedCampaignApply.response.status, 404);
 
-    const finalCreatorList = await request("/admin/creator-profiles", {
+    let throttledApply;
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      throttledApply = await request(
+        `/creator/campaigns/${campaignId}/applications`,
+        {
+          method: "POST",
+          cookie: creatorLogin.cookie,
+          body: {
+            personalMessage: validApplicationMessage,
+            paymentRuleAcknowledged: true,
+          },
+        },
+      );
+    }
+    assert.equal(throttledApply.response.status, 429, "campaign applications are rate limited");
+
+    let throttledSubmission;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      throttledSubmission = await request(
+        `/creator/applications/${applicationId}/submission`,
+        {
+          method: "POST",
+          cookie: creatorLogin.cookie,
+          body: {
+            title: "Rate limit check",
+            projectUrl: "https://example.test/project",
+            description: "This is a valid description for the rate limit test.",
+          },
+        },
+      );
+    }
+    assert.equal(throttledSubmission.response.status, 429, "project submissions are rate limited");
+
+    const finalCreatorList = await request(
+      `/admin/creator-profiles?page=1&approvalStatus=APPROVED&search=${encodeURIComponent(creatorEmail)}`,
+      {
       cookie: adminLogin.cookie,
-    });
+      },
+    );
     assert.equal(
       finalCreatorList.body.creators.find(
         (item) => item.email === creatorEmail,
@@ -1380,6 +1664,18 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       resetRequest.body,
       "password-reset requests must not reveal whether an email exists",
     );
+    const resetLimitEmail = `reset-limit-${suffix}@example.test`;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await request("/auth/password-reset/request", {
+        method: "POST",
+        body: { email: resetLimitEmail },
+      });
+    }
+    const resetThrottled = await request("/auth/password-reset/request", {
+      method: "POST",
+      body: { email: resetLimitEmail },
+    });
+    assert.equal(resetThrottled.response.status, 429, "password reset requests are rate limited");
 
     const resetToken = randomBytes(32).toString("base64url");
     const adminRecord = await db.query(
@@ -1437,6 +1733,25 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
       },
     });
     assert.equal(expiredReset.response.status, 400);
+    let throttledResetConfirmation;
+    for (let attempt = 0; attempt < 9; attempt += 1) {
+      throttledResetConfirmation = await request(
+        "/auth/password-reset/confirm",
+        {
+          method: "POST",
+          ip: "198.51.100.200",
+          body: {
+            token: randomBytes(32).toString("base64url"),
+            newPassword: "safe-reset-password-000",
+          },
+        },
+      );
+    }
+    assert.equal(
+      throttledResetConfirmation.response.status,
+      429,
+      "password reset confirmation is rate limited",
+    );
 
     const devPort = await findAvailablePort();
     const devServer = spawn(
@@ -1446,6 +1761,7 @@ test("signup, verification, profiles, campaigns, roles, and logout stay isolated
         cwd: fileURLToPath(new URL("..", import.meta.url)),
         env: {
           ...process.env,
+          DATABASE_URL: testDatabaseUrl,
           ADMIN_EMAILS: adminEmail,
           NODE_ENV: "development",
           PORT: String(devPort),

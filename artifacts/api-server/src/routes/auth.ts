@@ -44,6 +44,7 @@ import {
 import { sendEmail } from "../lib/email";
 import { appUrl, renderTransactionalEmail } from "../lib/email-template";
 import { rateLimit } from "../lib/request-guards";
+import { sanitizePlainText } from "../lib/sanitize-text";
 
 const router: IRouter = Router();
 const SESSION_COOKIE = "tsn_session";
@@ -163,7 +164,7 @@ router.post(
     return;
   }
 
-  const name = parsed.data.name.trim();
+  const name = sanitizePlainText(parsed.data.name, 120);
   const email = parsed.data.email.trim().toLowerCase();
   if (!name) {
     res.status(400).json({ error: "Name is required." });

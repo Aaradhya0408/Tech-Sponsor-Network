@@ -223,8 +223,19 @@ export interface AdminCreatorProfile {
   platforms: CreatorPlatformProfile[];
 }
 
+export interface Pagination {
+  /** @minimum 1 */
+  page: number;
+  pageSize: 20;
+  /** @minimum 0 */
+  total: number;
+  /** @minimum 0 */
+  totalPages: number;
+}
+
 export interface AdminCreatorProfiles {
   creators: AdminCreatorProfile[];
+  pagination: Pagination;
 }
 
 export interface CreatorApprovalInput {
@@ -334,6 +345,7 @@ export interface AdminCampaign {
   minimumFollowers: number;
   niches: CreatorNiche[];
   status: CampaignStatus;
+  hasApplied?: boolean;
   paymentRule: string;
   createdAt: string;
   updatedAt: string;
@@ -341,6 +353,7 @@ export interface AdminCampaign {
 
 export interface AdminCampaignList {
   campaigns: AdminCampaign[];
+  pagination: Pagination;
 }
 
 export type CampaignApplicationStatus = typeof CampaignApplicationStatus[keyof typeof CampaignApplicationStatus];
@@ -474,6 +487,7 @@ export type AdminCampaignSubmission = CreatorProjectSubmission & ({
 
 export interface AdminCampaignSubmissionList {
   submissions: AdminCampaignSubmission[];
+  pagination: Pagination;
 }
 
 export type CampaignApplicationRejectionReason = typeof CampaignApplicationRejectionReason[keyof typeof CampaignApplicationRejectionReason];
@@ -614,6 +628,7 @@ export interface CreatorCampaignApplication {
 
 export interface CreatorCampaignApplicationList {
   applications: CreatorCampaignApplication[];
+  pagination: Pagination;
 }
 
 export type InvoiceUploadInputKind = typeof InvoiceUploadInputKind[keyof typeof InvoiceUploadInputKind];
@@ -732,6 +747,7 @@ export type CreatorInvoice = Invoice;
 
 export interface CreatorInvoiceList {
   invoices: CreatorInvoice[];
+  pagination: Pagination;
 }
 
 export type AdminInvoice = Invoice & ({
@@ -743,6 +759,7 @@ export type AdminInvoice = Invoice & ({
 
 export interface AdminInvoiceList {
   invoices: AdminInvoice[];
+  pagination: Pagination;
 }
 
 export type AdminEmailLogEntryStatus = typeof AdminEmailLogEntryStatus[keyof typeof AdminEmailLogEntryStatus];
@@ -766,8 +783,9 @@ export interface AdminEmailLogEntry {
 }
 
 export interface AdminEmailLog {
-  /** @maxItems 100 */
+  /** @maxItems 20 */
   emails: AdminEmailLogEntry[];
+  pagination: Pagination;
 }
 
 export type AdminTestEmailResultStatus = typeof AdminTestEmailResultStatus[keyof typeof AdminTestEmailResultStatus];
@@ -826,15 +844,114 @@ export interface AdminCampaignApplication {
 
 export interface AdminCampaignApplicationList {
   applications: AdminCampaignApplication[];
+  pagination: Pagination;
 }
 
 export interface ErrorResponse {
   error: string;
 }
 
+export type ListAdminCreatorProfilesParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @maxLength 100
+ */
+search?: string;
+approvalStatus?: CreatorApprovalStatus;
+};
+
+export type ListCreatorCampaignsParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @maxLength 100
+ */
+search?: string;
+};
+
+export type ListCreatorApplicationsParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+campaignId?: string;
+/**
+ * @maxLength 100
+ */
+search?: string;
+};
+
 export type ListAdminCampaignSubmissionsParams = {
 campaignId?: string;
 status?: CampaignSubmissionStatus;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @maxLength 100
+ */
+search?: string;
+};
+
+export type ListAdminCampaignApplicationsParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @maxLength 100
+ */
+search?: string;
+};
+
+export type ListAdminCampaignsParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @maxLength 100
+ */
+search?: string;
+};
+
+export type ListCreatorInvoicesParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @maxLength 100
+ */
+search?: string;
+};
+
+export type ListAdminInvoicesParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @maxLength 100
+ */
+search?: string;
+};
+
+export type ListAdminEmailLogParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @maxLength 100
+ */
+search?: string;
 };
 
 export type UnsubscribeFromCampaignAlertsParams = {

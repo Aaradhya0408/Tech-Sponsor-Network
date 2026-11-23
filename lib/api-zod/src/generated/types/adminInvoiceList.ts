@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminInvoice } from './adminInvoice';
+import type { Pagination } from './pagination';
 
 export interface AdminInvoiceList {
   invoices: AdminInvoice[];
+  pagination: Pagination;
 }

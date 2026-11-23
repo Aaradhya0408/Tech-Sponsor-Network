@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import {
   CreateCreatorInvoiceBody,
@@ -36,6 +36,8 @@ import {
 } from "../lib/private-invoice-storage";
 import { requireRole } from "./auth";
 import { notifyPaymentMarkedPaid } from "../lib/email-events";
+import { escapeLike, LIST_PAGE_SIZE, paginationFor, readListQuery } from "../lib/list-query";
+import { sanitizePlainText } from "../lib/sanitize-text";
 
 const router: IRouter = Router();
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -317,12 +319,13 @@ router.post(
     }
 
     const invoiceDate = body.data.invoiceDate;
-    const description = body.data.description.trim();
+    const description = sanitizePlainText(body.data.description, 300);
+    const invoiceNumber = sanitizePlainText(body.data.invoiceNumber, 80);
     const invoiceStagingPath = body.data.invoiceObjectPath;
     const photoStagingPath = body.data.workPhotoObjectPath ?? null;
     if (
       !isRealDate(invoiceDate) ||
-      !body.data.invoiceNumber.trim() ||
+      !invoiceNumber ||
       !description ||
       description.length > 300 ||
       !isHttpUrl(body.data.workUrl)
@@ -418,7 +421,7 @@ router.post(
           id: invoiceId,
           applicationId: row.application.id,
           creatorId: creator.id,
-          invoiceNumber: body.data.invoiceNumber.trim(),
+          invoiceNumber,
           invoiceDate,
           amount: body.data.amount.toFixed(2),
           currency: body.data.currency,
@@ -484,8 +487,33 @@ router.post(
 router.get(
   "/creator/invoices",
   requireRole("CREATOR"),
-  async (_req, res): Promise<void> => {
+  async (req, res): Promise<void> => {
+    const list = readListQuery(req, res);
+    if (!list) return;
     const creator = userFrom(res);
+    const search = list.search ? `%${escapeLike(list.search)}%` : null;
+    const where = search
+      ? and(
+          eq(invoicesTable.creatorId, creator.id),
+          or(
+            ilike(campaignsTable.title, search),
+            ilike(invoicesTable.invoiceNumber, search),
+            ilike(invoicesTable.status, search),
+          ),
+        )
+      : eq(invoicesTable.creatorId, creator.id);
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(invoicesTable)
+      .innerJoin(
+        campaignApplicationsTable,
+        eq(invoicesTable.applicationId, campaignApplicationsTable.id),
+      )
+      .innerJoin(
+        campaignsTable,
+        eq(campaignApplicationsTable.campaignId, campaignsTable.id),
+      )
+      .where(where);
     const rows = await db
       .select({
         invoice: invoicesTable,
@@ -503,11 +531,14 @@ router.get(
         eq(campaignApplicationsTable.campaignId, campaignsTable.id),
       )
       .innerJoin(usersTable, eq(invoicesTable.creatorId, usersTable.id))
-      .where(eq(invoicesTable.creatorId, creator.id))
-      .orderBy(desc(invoicesTable.createdAt));
+      .where(where)
+      .orderBy(desc(invoicesTable.createdAt))
+      .limit(LIST_PAGE_SIZE)
+      .offset(list.offset);
     res.json(
       ListCreatorInvoicesResponse.parse({
         invoices: rows.map((invoice) => invoiceBaseResponse(invoice)),
+        pagination: paginationFor(list.page, total),
       }),
     );
   },
@@ -516,8 +547,35 @@ router.get(
 router.get(
   "/admin/invoices",
   requireRole("ADMIN"),
-  async (_req, res): Promise<void> => {
-    const rows = await db
+  async (req, res): Promise<void> => {
+    const list = readListQuery(req, res);
+    if (!list) return;
+    const search = list.search ? `%${escapeLike(list.search)}%` : null;
+    const where = search
+      ? or(
+          ilike(campaignsTable.title, search),
+          ilike(usersTable.name, search),
+          ilike(usersTable.email, search),
+          ilike(invoicesTable.invoiceNumber, search),
+          ilike(invoicesTable.status, search),
+        )
+      : undefined;
+    const countQuery = db
+      .select({ total: count() })
+      .from(invoicesTable)
+      .innerJoin(
+        campaignApplicationsTable,
+        eq(invoicesTable.applicationId, campaignApplicationsTable.id),
+      )
+      .innerJoin(
+        campaignsTable,
+        eq(campaignApplicationsTable.campaignId, campaignsTable.id),
+      )
+      .innerJoin(usersTable, eq(invoicesTable.creatorId, usersTable.id));
+    const [{ total }] = where
+      ? await countQuery.where(where)
+      : await countQuery;
+    const selection = db
       .select({
         invoice: invoicesTable,
         application: campaignApplicationsTable,
@@ -535,8 +593,17 @@ router.get(
         eq(campaignApplicationsTable.campaignId, campaignsTable.id),
       )
       .innerJoin(usersTable, eq(invoicesTable.creatorId, usersTable.id))
-      .leftJoin(paidByUsers, eq(invoicesTable.paidBy, paidByUsers.id))
-      .orderBy(desc(invoicesTable.createdAt));
+      .leftJoin(paidByUsers, eq(invoicesTable.paidBy, paidByUsers.id));
+    const rows = where
+      ? await selection
+          .where(where)
+          .orderBy(desc(invoicesTable.createdAt))
+          .limit(LIST_PAGE_SIZE)
+          .offset(list.offset)
+      : await selection
+          .orderBy(desc(invoicesTable.createdAt))
+          .limit(LIST_PAGE_SIZE)
+          .offset(list.offset);
     res.json(
       ListAdminInvoicesResponse.parse({
         invoices: rows.map((row) => ({
@@ -544,6 +611,7 @@ router.get(
           paidByName: row.paidByName,
           paidRecordedAt: row.invoice.paidRecordedAt?.toISOString() ?? null,
         })),
+        pagination: paginationFor(list.page, total),
       }),
     );
   },
@@ -600,7 +668,7 @@ router.patch(
         .set({
           status: "PAID",
           paidDate: body.data.paidDate,
-          paidNote: body.data.note?.trim() || null,
+          paidNote: sanitizePlainText(body.data.note ?? "", 300) || null,
           paidBy: admin.id,
           paidRecordedAt: recordedAt,
         })

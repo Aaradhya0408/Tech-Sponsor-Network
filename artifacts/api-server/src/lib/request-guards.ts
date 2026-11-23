@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { lt, sql } from "drizzle-orm";
+import { db, rateLimitBucketsTable } from "@workspace/db";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 
 interface RateLimitOptions {
@@ -7,12 +10,6 @@ interface RateLimitOptions {
   identity?: (req: Request, res: Response) => string | null | undefined;
 }
 
-interface RateLimitBucket {
-  count: number;
-  expiresAt: number;
-}
-
-const buckets = new Map<string, RateLimitBucket>();
 let requestsSinceCleanup = 0;
 
 function requestIp(req: Request): string {
@@ -25,38 +22,59 @@ function normalizeIdentity(value: string | null | undefined): string | null {
 }
 
 export function rateLimit(options: RateLimitOptions): RequestHandler {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const now = Date.now();
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const now = new Date();
     const identity = normalizeIdentity(options.identity?.(req, res));
     const keys = [
       `${options.name}:ip:${requestIp(req)}`,
       ...(identity ? [`${options.name}:identity:${identity}`] : []),
     ];
-
-    requestsSinceCleanup += 1;
-    if (requestsSinceCleanup >= 500 || buckets.size > 10_000) {
-      requestsSinceCleanup = 0;
-      for (const [key, bucket] of buckets) {
-        if (bucket.expiresAt <= now) buckets.delete(key);
-      }
-    }
-
-    let limited = false;
     let retryAfterMs = 0;
-    for (const key of keys) {
-      const bucket = buckets.get(key);
-      if (!bucket || bucket.expiresAt <= now) {
-        buckets.set(key, { count: 1, expiresAt: now + options.windowMs });
-        continue;
+    try {
+      for (const key of keys) {
+        const bucketKey = createHash("sha256").update(key).digest("hex");
+        const nextExpiry = new Date(now.getTime() + options.windowMs);
+        const [bucket] = await db
+          .insert(rateLimitBucketsTable)
+          .values({ bucketKey, attempts: 1, expiresAt: nextExpiry })
+          .onConflictDoUpdate({
+            target: rateLimitBucketsTable.bucketKey,
+            set: {
+              attempts: sql`CASE WHEN ${rateLimitBucketsTable.expiresAt} <= ${now} THEN 1 ELSE ${rateLimitBucketsTable.attempts} + 1 END`,
+              expiresAt: sql`CASE WHEN ${rateLimitBucketsTable.expiresAt} <= ${now} THEN ${nextExpiry} ELSE ${rateLimitBucketsTable.expiresAt} END`,
+            },
+          })
+          .returning({
+            attempts: rateLimitBucketsTable.attempts,
+            expiresAt: rateLimitBucketsTable.expiresAt,
+          });
+        if (bucket.attempts > options.maxAttempts) {
+          retryAfterMs = Math.max(
+            retryAfterMs,
+            bucket.expiresAt.getTime() - now.getTime(),
+          );
+        }
       }
-      bucket.count += 1;
-      if (bucket.count > options.maxAttempts) {
-        limited = true;
-        retryAfterMs = Math.max(retryAfterMs, bucket.expiresAt - now);
+
+      requestsSinceCleanup += 1;
+      if (requestsSinceCleanup >= 1000) {
+        requestsSinceCleanup = 0;
+        try {
+          await db
+            .delete(rateLimitBucketsTable)
+            .where(lt(rateLimitBucketsTable.expiresAt, now));
+        } catch {
+          // Expired rows do not affect enforcement; cleanup is best effort.
+        }
       }
+    } catch {
+      res.status(503).json({
+        error: "The request could not be checked. Please try again shortly.",
+      });
+      return;
     }
 
-    if (limited) {
+    if (retryAfterMs > 0) {
       res.setHeader("Retry-After", String(Math.max(1, Math.ceil(retryAfterMs / 1000))));
       res.status(429).json({ error: "Too many attempts. Please wait and try again." });
       return;
@@ -95,7 +113,7 @@ export function csrfProtection(
       res.status(403).json({ error: "This request could not be verified." });
       return;
     }
-  } else if (req.get("sec-fetch-site")?.toLowerCase() === "cross-site") {
+  } else if (req.get("sec-fetch-site")?.toLowerCase() !== "same-origin") {
     res.status(403).json({ error: "This request could not be verified." });
     return;
   }

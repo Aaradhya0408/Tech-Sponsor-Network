@@ -34,6 +34,7 @@ import { ForgotPasswordPage, ResetPasswordPage } from '@/components/password-res
 import NotFound from '@/pages/not-found';
 import { COUNTRY_OPTIONS } from '@/lib/countries';
 import { ResponsiveNav } from '@/components/responsive-nav';
+import { ListPagination } from '@/components/list-pagination';
 
 const queryClient = new QueryClient();
 
@@ -337,7 +338,11 @@ function Dashboard({ admin = false }: { admin?: boolean }) {
   const creator = useGetCreatorDashboard({ query: { enabled: !!me.data && !admin, retry: false, queryKey: ['/api/auth/creator/dashboard'] } });
   const adminData = useGetAdminDashboard({ query: { enabled: !!me.data && admin, retry: false, queryKey: ['/api/auth/admin/dashboard'] } });
   const creatorProfile = useGetCreatorProfile({ query: { enabled: !!me.data && !admin, queryKey: getGetCreatorProfileQueryKey(), retry: false } });
-  const adminProfiles = useListAdminCreatorProfiles({ query: { enabled: !!me.data && admin, queryKey: getListAdminCreatorProfilesQueryKey(), retry: false } });
+  const [creatorPage, setCreatorPage] = useState(1);
+  const [creatorSearch, setCreatorSearch] = useState('');
+  const [creatorFilter, setCreatorFilter] = useState<'ALL' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED'>('PENDING_APPROVAL');
+  const creatorListParams = { page: creatorPage, search: creatorSearch, ...(creatorFilter === 'ALL' ? {} : { approvalStatus: creatorFilter }) };
+  const adminProfiles = useListAdminCreatorProfiles(creatorListParams, { query: { enabled: !!me.data && admin, queryKey: getListAdminCreatorProfilesQueryKey(creatorListParams), retry: false } });
   const logout = useLogOut();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -364,7 +369,7 @@ function Dashboard({ admin = false }: { admin?: boolean }) {
   return <DashboardShell user={user} admin={admin} onLogout={handleLogout}>
     {logoutError && <div className="mt-6"><Notice kind="error" text={logoutError} /></div>}
     {admin
-      ? <AdminReview query={adminProfiles} />
+      ? <AdminReview query={adminProfiles} page={creatorPage} onPageChange={setCreatorPage} search={creatorSearch} onSearchChange={value => { setCreatorSearch(value); setCreatorPage(1); }} filter={creatorFilter} onFilterChange={value => { setCreatorFilter(value); setCreatorPage(1); }} />
       : <CreatorProfileEditor query={creatorProfile} />}
   </DashboardShell>;
 }
@@ -529,20 +534,17 @@ function CreatorProfileEditor({ query }: { query: CreatorProfileQuery }) {
   </div>;
 }
 
-function AdminReview({ query }: { query: UseQueryResult<AdminCreatorProfiles, Error> }) {
-  const queryClient = useQueryClient();
+function AdminReview({ query, page, onPageChange, search, onSearchChange, filter, onFilterChange }: { query: UseQueryResult<AdminCreatorProfiles, Error>; page: number; onPageChange: (page: number) => void; search: string; onSearchChange: (value: string) => void; filter: 'ALL' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED'; onFilterChange: (value: 'ALL' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED') => void }) {
   const approval = useUpdateCreatorApproval();
   const verification = useUpdateCreatorPlatformVerification();
-  const [filter, setFilter] = useState<'ALL' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED'>('PENDING_APPROVAL');
-  const [search, setSearch] = useState('');
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [actionError, setActionError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
   const creators = query.data?.creators ?? [];
-  const visible = creators.filter(person => (filter === 'ALL' || person.approvalStatus === filter) && `${person.displayName} ${person.userName} ${person.email} ${person.proofCode}`.toLowerCase().includes(search.toLowerCase()));
-  const pendingCount = creators.filter(person => person.approvalStatus === 'PENDING_APPROVAL').length;
-  const refresh = () => queryClient.invalidateQueries({ queryKey: getListAdminCreatorProfilesQueryKey() });
+  const visible = creators;
+  const shownCount = query.data?.pagination.total ?? creators.length;
+  const refresh = () => query.refetch();
   const decide = (person: AdminCreatorProfile, status: 'APPROVED' | 'REJECTED', rejectionReason?: string) => {
     setActionError(''); setActionMessage('');
     approval.mutate({ userId: person.userId, data: status === 'REJECTED' ? { status, reason: rejectionReason } : { status } }, {
@@ -562,18 +564,19 @@ function AdminReview({ query }: { query: UseQueryResult<AdminCreatorProfiles, Er
   return <div className="page-enter mt-8 space-y-5">
     <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
       <div className="rounded-[22px] border border-border bg-card p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="eyebrow text-primary">Review desk</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">Creator profiles</h2><p className="mt-1 max-w-lg text-sm leading-6 text-muted-foreground">Review profile context, verify platform links manually, and record a clear decision.</p></div><span className="rounded-full bg-[#f0e6d8] px-3 py-1.5 text-xs font-bold text-[#805a36]" data-testid="text-pending-count">{pendingCount} awaiting review</span></div>
+        <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="eyebrow text-primary">Review desk</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">Creator profiles</h2><p className="mt-1 max-w-lg text-sm leading-6 text-muted-foreground">Review profile context, verify platform links manually, and record a clear decision.</p></div><span className="rounded-full bg-[#f0e6d8] px-3 py-1.5 text-xs font-bold text-[#805a36]" data-testid="text-pending-count">{shownCount} {filter === 'PENDING_APPROVAL' ? 'awaiting review' : filter === 'ALL' ? 'profiles' : filter.toLowerCase()}</span></div>
       </div>
       <div className="flex items-center gap-3 rounded-[22px] bg-[#213a32] px-5 py-4 text-[#f4f0e5] sm:min-w-[210px]"><div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-[#b8d4bd]"><ShieldCheck size={19} /></div><div><p className="eyebrow text-[#a9c9b4]">Network trust</p><p className="mt-1 text-sm font-semibold">Manual review only</p></div></div>
     </div>
     <div className="flex flex-col gap-3 rounded-[18px] border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="relative w-full sm:max-w-xs"><Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" /><input className="field !py-2.5 !pl-10" data-testid="input-search-creators" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search name, email, code" /></div>
-      <div className="flex gap-1 overflow-x-auto">{(['PENDING_APPROVAL', 'ALL', 'APPROVED', 'REJECTED'] as const).map(value => <button key={value} onClick={() => setFilter(value)} data-testid={`button-filter-${value.toLowerCase()}`} className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition ${filter === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>{value === 'PENDING_APPROVAL' ? 'Pending' : value === 'ALL' ? 'All profiles' : value === 'APPROVED' ? 'Approved' : 'Rejected'}</button>)}</div>
+      <div className="relative w-full sm:max-w-xs"><Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" /><input className="field !py-2.5 !pl-10" data-testid="input-search-creators" value={search} maxLength={100} onChange={event => onSearchChange(event.target.value)} placeholder="Search name, email, code" /></div>
+      <div className="flex gap-1 overflow-x-auto">{(['PENDING_APPROVAL', 'ALL', 'APPROVED', 'REJECTED'] as const).map(value => <button key={value} onClick={() => onFilterChange(value)} data-testid={`button-filter-${value.toLowerCase()}`} className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition ${filter === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>{value === 'PENDING_APPROVAL' ? 'Pending' : value === 'ALL' ? 'All profiles' : value === 'APPROVED' ? 'Approved' : 'Rejected'}</button>)}</div>
     </div>
     {actionError && <Notice kind="error" text={actionError} />}
     {actionMessage && <Notice kind="success" text={actionMessage} />}
-    {!visible.length ? <div className="rounded-[22px] border border-dashed border-border bg-card px-6 py-14 text-center" data-testid="empty-admin-profiles"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-secondary text-primary"><Search size={20} /></div><h3 className="serif mt-4 text-xl font-semibold">No profiles in this view.</h3><p className="mt-1 text-sm text-muted-foreground">{search ? 'Try another search term.' : 'New creator profiles will appear here when submitted.'}</p>{creators.length > 0 ? <button type="button" onClick={() => { setSearch(''); setFilter('ALL'); }} className="mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-5 py-3 text-sm font-semibold text-primary hover:bg-muted">Show all profiles</button> : <Link href="/admin/dashboard" className="mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-5 py-3 text-sm font-semibold text-primary hover:bg-muted">Back to admin dashboard</Link>}</div>
+    {!visible.length ? <div className="rounded-[22px] border border-dashed border-border bg-card px-6 py-14 text-center" data-testid="empty-admin-profiles"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-secondary text-primary"><Search size={20} /></div><h3 className="serif mt-4 text-xl font-semibold">No profiles in this view.</h3><p className="mt-1 text-sm text-muted-foreground">{search ? 'Try another search term or filter.' : 'New creator profiles will appear here when submitted.'}</p>{creators.length > 0 ? <button type="button" onClick={() => { onSearchChange(''); onFilterChange('ALL'); }} className="mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-5 py-3 text-sm font-semibold text-primary hover:bg-muted">Show all profiles</button> : <Link href="/admin/dashboard" className="mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-5 py-3 text-sm font-semibold text-primary hover:bg-muted">Back to admin dashboard</Link>}</div>
       : <div className="space-y-4">{visible.map(person => <AdminCreatorCard key={person.userId} person={person} rejecting={rejecting === person.userId} reason={reason} onRejectStart={() => { setRejecting(person.userId); setReason(''); }} onRejectCancel={() => setRejecting(null)} onReasonChange={setReason} onApprove={() => decide(person, 'APPROVED')} onReject={() => decide(person, 'REJECTED', reason.trim())} onToggleVerification={(platform, verified) => verifyPlatform(person, platform, verified)} busy={approval.isPending || verification.isPending} />)}</div>}
+    <ListPagination pagination={query.data?.pagination} onPageChange={onPageChange} className="mt-5" />
   </div>;
 }
 

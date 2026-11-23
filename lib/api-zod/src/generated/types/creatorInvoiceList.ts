@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CreatorInvoice } from './creatorInvoice';
+import type { Pagination } from './pagination';
 
 export interface CreatorInvoiceList {
   invoices: CreatorInvoice[];
+  pagination: Pagination;
 }

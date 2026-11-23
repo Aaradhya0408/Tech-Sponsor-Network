@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, or } from "drizzle-orm";
 import {
   CreateCreatorCampaignApplicationBody,
   CreateCreatorCampaignApplicationParams,
@@ -18,6 +18,8 @@ import { Router, type IRouter, type Response } from "express";
 import { campaignEligibilityReasons } from "../lib/campaign-eligibility";
 import { notifyApplicationReceived } from "../lib/email-events";
 import { requireRole } from "./auth";
+import { escapeLike, LIST_PAGE_SIZE, paginationFor, readListQuery } from "../lib/list-query";
+import { sanitizePlainText } from "../lib/sanitize-text";
 import { rateLimit } from "../lib/request-guards";
 
 const router: IRouter = Router();
@@ -79,8 +81,45 @@ function creatorApplicationResponse(
 router.get(
   "/creator/applications",
   requireRole("CREATOR"),
-  async (_req, res): Promise<void> => {
+  async (req, res): Promise<void> => {
+    const list = readListQuery(req, res);
+    if (!list) return;
     const creatorId = creatorIdFrom(res);
+    const rawCampaignId = req.query.campaignId;
+    if (
+      rawCampaignId !== undefined &&
+      (typeof rawCampaignId !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          rawCampaignId,
+        ))
+    ) {
+      error(res, 400, "Choose a valid campaign.");
+      return;
+    }
+    const baseConditions = [
+      eq(campaignApplicationsTable.creatorId, creatorId),
+      ...(typeof rawCampaignId === "string"
+        ? [eq(campaignApplicationsTable.campaignId, rawCampaignId)]
+        : []),
+    ];
+    const search = list.search ? `%${escapeLike(list.search)}%` : null;
+    const where = search
+      ? and(
+          ...baseConditions,
+          or(
+            ilike(campaignsTable.title, search),
+            ilike(campaignApplicationsTable.personalMessage, search),
+          ),
+        )
+      : and(...baseConditions);
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(campaignApplicationsTable)
+      .innerJoin(
+        campaignsTable,
+        eq(campaignApplicationsTable.campaignId, campaignsTable.id),
+      )
+      .where(where);
     const rows = await db
       .select({
         application: campaignApplicationsTable,
@@ -92,8 +131,10 @@ router.get(
         campaignsTable,
         eq(campaignApplicationsTable.campaignId, campaignsTable.id),
       )
-      .where(eq(campaignApplicationsTable.creatorId, creatorId))
-      .orderBy(desc(campaignApplicationsTable.createdAt));
+      .where(where)
+      .orderBy(desc(campaignApplicationsTable.createdAt))
+      .limit(LIST_PAGE_SIZE)
+      .offset(list.offset);
     const applicationIds = rows.map(({ application }) => application.id);
     const submissionRows =
       applicationIds.length > 0
@@ -123,6 +164,7 @@ router.get(
             latestByApplication.get(application.id) ?? null,
           ),
         ),
+        pagination: paginationFor(list.page, total),
       }),
     );
   },
@@ -146,7 +188,7 @@ router.post(
       return;
     }
 
-    const personalMessage = body.data.personalMessage.trim();
+    const personalMessage = sanitizePlainText(body.data.personalMessage, 1000);
     if (personalMessage.length < 20 || personalMessage.length > 1000) {
       error(res, 400, "Your personal message must be 20 to 1,000 characters.");
       return;

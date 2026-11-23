@@ -18,6 +18,7 @@ import type { AdminCampaign, CampaignInput, CampaignStatus, CreatorNiche, Creato
 import { COUNTRY_OPTIONS } from '@/lib/countries';
 import { Form } from '@/components/ui/form';
 import { ResponsiveNav } from '@/components/responsive-nav';
+import { ListPagination } from '@/components/list-pagination';
 
 const PAYMENT_RULE = 'Payment is made only if your submission is accepted. If your work is not accepted, no payment will be made.';
 const PLATFORMS: CreatorPlatform[] = ['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'];
@@ -221,7 +222,10 @@ function StatusPill({ status }: { status: CampaignStatus }) {
 export default function AdminCampaigns() {
   const current = useGetCurrentUser({ query: { queryKey: getGetCurrentUserQueryKey(), retry: false } });
   const admin = current.data?.role === 'ADMIN';
-  const campaignsQuery = useListAdminCampaigns({ query: { enabled: admin, queryKey: getListAdminCampaignsQueryKey(), retry: false } });
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const listParams = { page, search };
+  const campaignsQuery = useListAdminCampaigns(listParams, { query: { enabled: admin, queryKey: getListAdminCampaignsQueryKey(listParams), retry: false } });
   const create = useCreateAdminCampaign();
   const update = useUpdateAdminCampaign();
   const changeStatus = useUpdateAdminCampaignStatus();
@@ -239,7 +243,7 @@ export default function AdminCampaigns() {
     else if (current.data && current.data.role !== 'ADMIN') setLocation('/dashboard');
   }, [current.isError, current.data, setLocation]);
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: getListAdminCampaignsQueryKey() });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: getListAdminCampaignsQueryKey(listParams) });
   function save(input: CampaignInput) {
     setNotice('');
     setActionError('');
@@ -317,6 +321,7 @@ export default function AdminCampaigns() {
       {formOpen && <CampaignForm key={editing?.id ?? 'new'} campaign={editing} busy={busy} onCancel={() => { setFormOpen(false); setEditing(null); }} onSave={save} error={actionError} success="" />}
       <div className="mt-9">
         <div className="mb-4 flex items-end justify-between gap-4"><div><div className="eyebrow text-muted-foreground">Campaign register</div><h2 className="serif mt-1 text-2xl font-semibold tracking-[-.04em]">All campaigns</h2></div><span className="text-xs text-muted-foreground" data-testid="text-campaign-count">{campaignsQuery.isLoading ? 'Loading…' : `${campaigns.length} ${campaigns.length === 1 ? 'campaign' : 'campaigns'}`}</span></div>
+        <label className="mb-4 block"><span className="sr-only">Search campaigns</span><input className="field w-full sm:max-w-sm" value={search} maxLength={100} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Search campaigns" /></label>
         {campaignsQuery.isLoading ? <CampaignSkeleton /> : campaignsQuery.isError ? <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground" data-testid="status-campaign-list-error">Campaigns could not be loaded. Use retry above to try again.</div> : campaigns.length === 0 ? <div className="rounded-[22px] border border-dashed border-border bg-card/60 px-6 py-12 text-center" data-testid="empty-campaigns"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><Radio size={21} /></div><div className="eyebrow mt-5 text-primary">A considered first step</div><h3 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">No campaigns yet.</h3><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Create a clear brief to give the right creators a reason to lean in.</p><button onClick={startCreate} data-testid="button-create-first-campaign" className="mt-5 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"><Plus size={15} className="mr-2 inline" />Create first campaign</button></div> : <div className="space-y-3" data-testid="list-admin-campaigns">
           {campaigns.map(campaign => <article key={campaign.id} data-testid={`row-campaign-${campaign.id}`} className="rounded-2xl border border-border/80 bg-card p-4 transition hover:border-primary/30 sm:p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -336,6 +341,7 @@ export default function AdminCampaigns() {
             </div>
           </article>)}
         </div>}
+        <ListPagination pagination={campaignsQuery.data?.pagination} onPageChange={setPage} className="mt-4" />
       </div>
     </section>
     <footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">Tech Sponsor Network <span className="px-2">·</span> Admin workspace</footer>

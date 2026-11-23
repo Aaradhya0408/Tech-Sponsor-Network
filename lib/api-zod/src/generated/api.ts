@@ -31,13 +31,13 @@ export const signUpBodyPasswordMax = 128;
 
 export const SignUpBody = zod.object({
   "name": zod.string().min(1).max(signUpBodyNameMax),
-  "email": zod.string().email().max(signUpBodyEmailMax),
+  "email": zod.email().max(signUpBodyEmailMax),
   "password": zod.string().min(signUpBodyPasswordMin).max(signUpBodyPasswordMax)
 })
 
 export const SignUpResponse = zod.object({
   "message": zod.string(),
-  "verificationUrl": zod.string().url().optional()
+  "verificationUrl": zod.url().optional()
 })
 
 
@@ -51,7 +51,7 @@ export const logInBodyPasswordMax = 128;
 
 
 export const LogInBody = zod.object({
-  "email": zod.string().email().max(logInBodyEmailMax),
+  "email": zod.email().max(logInBodyEmailMax),
   "password": zod.string().min(1).max(logInBodyPasswordMax)
 })
 
@@ -76,13 +76,13 @@ export const resendVerificationLinkBodyPasswordMax = 128;
 
 
 export const ResendVerificationLinkBody = zod.object({
-  "email": zod.string().email().max(resendVerificationLinkBodyEmailMax),
+  "email": zod.email().max(resendVerificationLinkBodyEmailMax),
   "password": zod.string().min(1).max(resendVerificationLinkBodyPasswordMax)
 })
 
 export const ResendVerificationLinkResponse = zod.object({
   "message": zod.string(),
-  "verificationUrl": zod.string().url().optional()
+  "verificationUrl": zod.url().optional()
 })
 
 
@@ -95,12 +95,12 @@ export const requestPasswordResetBodyEmailMax = 320;
 
 
 export const RequestPasswordResetBody = zod.object({
-  "email": zod.string().email().max(requestPasswordResetBodyEmailMax)
+  "email": zod.email().max(requestPasswordResetBodyEmailMax)
 })
 
 export const RequestPasswordResetResponse = zod.object({
   "message": zod.string(),
-  "resetUrl": zod.string().url().optional()
+  "resetUrl": zod.url().optional()
 })
 
 
@@ -205,7 +205,7 @@ export const getCreatorProfileResponsePlatformsItemFollowersMin = 0;
 
 
 export const GetCreatorProfileResponse = zod.object({
-  "userId": zod.string().uuid(),
+  "userId": zod.uuid(),
   "displayName": zod.string(),
   "bio": zod.string(),
   "country": zod.string().max(getCreatorProfileResponseCountryMax).regex(getCreatorProfileResponseCountryRegExp).describe('ISO-style two-letter country or territory code, or empty before profile setup'),
@@ -214,11 +214,11 @@ export const GetCreatorProfileResponse = zod.object({
   "approvalStatus": zod.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED']),
   "rejectionReason": zod.string().nullable(),
   "campaignAlertsEnabled": zod.boolean(),
-  "completeness": zod.number().int().min(getCreatorProfileResponseCompletenessMin).max(getCreatorProfileResponseCompletenessMax),
+  "completeness": zod.int().min(getCreatorProfileResponseCompletenessMin).max(getCreatorProfileResponseCompletenessMax),
   "platforms": zod.array(zod.object({
   "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
-  "url": zod.string().url(),
-  "followers": zod.number().int().min(getCreatorProfileResponsePlatformsItemFollowersMin),
+  "url": zod.url(),
+  "followers": zod.int().min(getCreatorProfileResponsePlatformsItemFollowersMin),
   "verified": zod.boolean()
 }))
 })
@@ -252,8 +252,8 @@ export const UpdateCreatorProfileBody = zod.object({
   "niche": zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other']),
   "platforms": zod.array(zod.object({
   "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
-  "url": zod.string().url().max(updateCreatorProfileBodyPlatformsItemUrlMax),
-  "followers": zod.number().int().min(updateCreatorProfileBodyPlatformsItemFollowersMin).max(updateCreatorProfileBodyPlatformsItemFollowersMax)
+  "url": zod.url().max(updateCreatorProfileBodyPlatformsItemUrlMax),
+  "followers": zod.int().min(updateCreatorProfileBodyPlatformsItemFollowersMin).max(updateCreatorProfileBodyPlatformsItemFollowersMax)
 })).max(updateCreatorProfileBodyPlatformsMax),
   "campaignAlertsEnabled": zod.boolean()
 })
@@ -271,7 +271,7 @@ export const updateCreatorProfileResponsePlatformsItemFollowersMin = 0;
 
 
 export const UpdateCreatorProfileResponse = zod.object({
-  "userId": zod.string().uuid(),
+  "userId": zod.uuid(),
   "displayName": zod.string(),
   "bio": zod.string(),
   "country": zod.string().max(updateCreatorProfileResponseCountryMax).regex(updateCreatorProfileResponseCountryRegExp).describe('ISO-style two-letter country or territory code, or empty before profile setup'),
@@ -280,11 +280,11 @@ export const UpdateCreatorProfileResponse = zod.object({
   "approvalStatus": zod.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED']),
   "rejectionReason": zod.string().nullable(),
   "campaignAlertsEnabled": zod.boolean(),
-  "completeness": zod.number().int().min(updateCreatorProfileResponseCompletenessMin).max(updateCreatorProfileResponseCompletenessMax),
+  "completeness": zod.int().min(updateCreatorProfileResponseCompletenessMin).max(updateCreatorProfileResponseCompletenessMax),
   "platforms": zod.array(zod.object({
   "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
-  "url": zod.string().url(),
-  "followers": zod.number().int().min(updateCreatorProfileResponsePlatformsItemFollowersMin),
+  "url": zod.url(),
+  "followers": zod.int().min(updateCreatorProfileResponsePlatformsItemFollowersMin),
   "verified": zod.boolean()
 }))
 })
@@ -293,6 +293,17 @@ export const UpdateCreatorProfileResponse = zod.object({
 /**
  * @summary List all creator profiles for review
  */
+
+export const listAdminCreatorProfilesQuerySearchMax = 100;
+
+
+
+export const ListAdminCreatorProfilesQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional(),
+  "search": zod.string().max(listAdminCreatorProfilesQuerySearchMax).optional(),
+  "approvalStatus": zod.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED']).optional()
+})
+
 export const listAdminCreatorProfilesResponseCreatorsItemCountryMax = 2;
 
 
@@ -304,12 +315,17 @@ export const listAdminCreatorProfilesResponseCreatorsItemCompletenessMax = 100;
 export const listAdminCreatorProfilesResponseCreatorsItemPlatformsItemFollowersMin = 0;
 
 
+export const listAdminCreatorProfilesResponsePaginationTotalMin = 0;
+
+export const listAdminCreatorProfilesResponsePaginationTotalPagesMin = 0;
+
+
 
 export const ListAdminCreatorProfilesResponse = zod.object({
   "creators": zod.array(zod.object({
-  "userId": zod.string().uuid(),
+  "userId": zod.uuid(),
   "userName": zod.string(),
-  "email": zod.string().email(),
+  "email": zod.email(),
   "displayName": zod.string(),
   "bio": zod.string(),
   "country": zod.string().max(listAdminCreatorProfilesResponseCreatorsItemCountryMax).regex(listAdminCreatorProfilesResponseCreatorsItemCountryRegExp).describe('ISO-style two-letter country or territory code, or empty before profile setup'),
@@ -317,14 +333,20 @@ export const ListAdminCreatorProfilesResponse = zod.object({
   "proofCode": zod.string().regex(listAdminCreatorProfilesResponseCreatorsItemProofCodeRegExp),
   "approvalStatus": zod.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED']),
   "rejectionReason": zod.string().nullable(),
-  "completeness": zod.number().int().min(listAdminCreatorProfilesResponseCreatorsItemCompletenessMin).max(listAdminCreatorProfilesResponseCreatorsItemCompletenessMax),
+  "completeness": zod.int().min(listAdminCreatorProfilesResponseCreatorsItemCompletenessMin).max(listAdminCreatorProfilesResponseCreatorsItemCompletenessMax),
   "platforms": zod.array(zod.object({
   "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
-  "url": zod.string().url(),
-  "followers": zod.number().int().min(listAdminCreatorProfilesResponseCreatorsItemPlatformsItemFollowersMin),
+  "url": zod.url(),
+  "followers": zod.int().min(listAdminCreatorProfilesResponseCreatorsItemPlatformsItemFollowersMin),
   "verified": zod.boolean()
 }))
-}))
+})),
+  "pagination": zod.object({
+  "page": zod.int().min(1),
+  "pageSize": zod.literal(20),
+  "total": zod.int().min(listAdminCreatorProfilesResponsePaginationTotalMin),
+  "totalPages": zod.int().min(listAdminCreatorProfilesResponsePaginationTotalPagesMin)
+})
 })
 
 
@@ -332,7 +354,7 @@ export const ListAdminCreatorProfilesResponse = zod.object({
  * @summary Approve or reject a creator profile
  */
 export const UpdateCreatorApprovalParams = zod.object({
-  "userId": zod.coerce.string().uuid()
+  "userId": zod.uuid()
 })
 
 export const updateCreatorApprovalBodyReasonMax = 300;
@@ -353,7 +375,7 @@ export const UpdateCreatorApprovalResponse = zod.object({
  * @summary Mark a creator platform link verified
  */
 export const UpdateCreatorPlatformVerificationParams = zod.object({
-  "userId": zod.coerce.string().uuid(),
+  "userId": zod.uuid(),
   "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])
 })
 
@@ -369,16 +391,31 @@ export const UpdateCreatorPlatformVerificationResponse = zod.object({
 /**
  * @summary List published campaigns available to creators
  */
+
+export const listCreatorCampaignsQuerySearchMax = 100;
+
+
+
+export const ListCreatorCampaignsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional(),
+  "search": zod.string().max(listCreatorCampaignsQuerySearchMax).optional()
+})
+
 export const listCreatorCampaignsResponseCampaignsItemDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
 export const listCreatorCampaignsResponseCampaignsItemAllowedCountriesItemMax = 3;
 
 
 export const listCreatorCampaignsResponseCampaignsItemAllowedCountriesItemRegExp = new RegExp('^(Any|[A-Z]{2})$');
 
+export const listCreatorCampaignsResponsePaginationTotalMin = 0;
+
+export const listCreatorCampaignsResponsePaginationTotalPagesMin = 0;
+
+
 
 export const ListCreatorCampaignsResponse = zod.object({
   "campaigns": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "title": zod.string(),
   "organizerName": zod.string(),
   "shortDescription": zod.string(),
@@ -389,13 +426,20 @@ export const ListCreatorCampaignsResponse = zod.object({
   "deadline": zod.string().regex(listCreatorCampaignsResponseCampaignsItemDeadlineRegExp),
   "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
   "allowedCountries": zod.array(zod.string().max(listCreatorCampaignsResponseCampaignsItemAllowedCountriesItemMax).regex(listCreatorCampaignsResponseCampaignsItemAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
-  "minimumFollowers": zod.number().int(),
+  "minimumFollowers": zod.int(),
   "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
   "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "hasApplied": zod.boolean().optional(),
   "paymentRule": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
-}))
+})),
+  "pagination": zod.object({
+  "page": zod.int().min(1),
+  "pageSize": zod.literal(20),
+  "total": zod.int().min(listCreatorCampaignsResponsePaginationTotalMin),
+  "totalPages": zod.int().min(listCreatorCampaignsResponsePaginationTotalPagesMin)
+})
 })
 
 
@@ -403,7 +447,7 @@ export const ListCreatorCampaignsResponse = zod.object({
  * @summary Get a published campaign available to creators
  */
 export const GetCreatorCampaignParams = zod.object({
-  "campaignId": zod.coerce.string().uuid()
+  "campaignId": zod.uuid()
 })
 
 export const getCreatorCampaignResponseDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
@@ -414,7 +458,7 @@ export const getCreatorCampaignResponseAllowedCountriesItemRegExp = new RegExp('
 
 
 export const GetCreatorCampaignResponse = zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "title": zod.string(),
   "organizerName": zod.string(),
   "shortDescription": zod.string(),
@@ -425,9 +469,10 @@ export const GetCreatorCampaignResponse = zod.object({
   "deadline": zod.string().regex(getCreatorCampaignResponseDeadlineRegExp),
   "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
   "allowedCountries": zod.array(zod.string().max(getCreatorCampaignResponseAllowedCountriesItemMax).regex(getCreatorCampaignResponseAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
-  "minimumFollowers": zod.number().int(),
+  "minimumFollowers": zod.int(),
   "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
   "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "hasApplied": zod.boolean().optional(),
   "paymentRule": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -437,22 +482,38 @@ export const GetCreatorCampaignResponse = zod.object({
 /**
  * @summary List the signed-in creator's campaign applications
  */
+
+export const listCreatorApplicationsQuerySearchMax = 100;
+
+
+
+export const ListCreatorApplicationsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional(),
+  "campaignId": zod.uuid().optional(),
+  "search": zod.string().max(listCreatorApplicationsQuerySearchMax).optional()
+})
+
 export const listCreatorApplicationsResponseApplicationsItemCampaignDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+
+export const listCreatorApplicationsResponsePaginationTotalMin = 0;
+
+export const listCreatorApplicationsResponsePaginationTotalPagesMin = 0;
+
 
 
 export const ListCreatorApplicationsResponse = zod.object({
   "applications": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
   "campaignTitle": zod.string(),
   "campaignDeadline": zod.string().regex(listCreatorApplicationsResponseApplicationsItemCampaignDeadlineRegExp),
   "startedAt": zod.coerce.date().nullable(),
   "submission": zod.union([zod.object({
-  "id": zod.string().uuid(),
-  "applicationId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "applicationId": zod.uuid(),
   "attempt": zod.union([zod.literal(1),zod.literal(2)]),
   "title": zod.string(),
-  "projectUrl": zod.string().url(),
+  "projectUrl": zod.url(),
   "description": zod.string(),
   "coverUrl": zod.string().nullable(),
   "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']),
@@ -467,7 +528,13 @@ export const ListCreatorApplicationsResponse = zod.object({
   "decisionNote": zod.string().nullable(),
   "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
   "appliedAt": zod.coerce.date()
-}))
+})),
+  "pagination": zod.object({
+  "page": zod.int().min(1),
+  "pageSize": zod.literal(20),
+  "total": zod.int().min(listCreatorApplicationsResponsePaginationTotalMin),
+  "totalPages": zod.int().min(listCreatorApplicationsResponsePaginationTotalPagesMin)
+})
 })
 
 
@@ -476,7 +543,7 @@ export const ListCreatorApplicationsResponse = zod.object({
  * @summary Apply to an eligible published campaign
  */
 export const CreateCreatorCampaignApplicationParams = zod.object({
-  "campaignId": zod.coerce.string().uuid()
+  "campaignId": zod.uuid()
 })
 
 export const createCreatorCampaignApplicationBodyPersonalMessageMin = 20;
@@ -493,17 +560,17 @@ export const createCreatorCampaignApplicationResponseCampaignDeadlineRegExp = ne
 
 
 export const CreateCreatorCampaignApplicationResponse = zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
   "campaignTitle": zod.string(),
   "campaignDeadline": zod.string().regex(createCreatorCampaignApplicationResponseCampaignDeadlineRegExp),
   "startedAt": zod.coerce.date().nullable(),
   "submission": zod.union([zod.object({
-  "id": zod.string().uuid(),
-  "applicationId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "applicationId": zod.uuid(),
   "attempt": zod.union([zod.literal(1),zod.literal(2)]),
   "title": zod.string(),
-  "projectUrl": zod.string().url(),
+  "projectUrl": zod.url(),
   "description": zod.string(),
   "coverUrl": zod.string().nullable(),
   "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']),
@@ -525,11 +592,11 @@ export const CreateCreatorCampaignApplicationResponse = zod.object({
  * @summary Start a project for an accepted campaign application
  */
 export const StartCreatorCampaignProjectParams = zod.object({
-  "applicationId": zod.coerce.string().uuid()
+  "applicationId": zod.uuid()
 })
 
 export const StartCreatorCampaignProjectResponse = zod.object({
-  "applicationId": zod.string().uuid(),
+  "applicationId": zod.uuid(),
   "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
   "startedAt": zod.coerce.date()
 })
@@ -539,7 +606,7 @@ export const StartCreatorCampaignProjectResponse = zod.object({
  * @summary Request a private upload URL for a submission cover
  */
 export const RequestCreatorSubmissionUploadUrlParams = zod.object({
-  "applicationId": zod.coerce.string().uuid()
+  "applicationId": zod.uuid()
 })
 
 export const requestCreatorSubmissionUploadUrlBodyNameMax = 255;
@@ -550,12 +617,12 @@ export const requestCreatorSubmissionUploadUrlBodySizeMax = 5242880;
 
 export const RequestCreatorSubmissionUploadUrlBody = zod.object({
   "name": zod.string().min(1).max(requestCreatorSubmissionUploadUrlBodyNameMax),
-  "size": zod.number().int().min(1).max(requestCreatorSubmissionUploadUrlBodySizeMax),
+  "size": zod.int().min(1).max(requestCreatorSubmissionUploadUrlBodySizeMax),
   "contentType": zod.enum(['image/jpeg', 'image/png'])
 })
 
 export const RequestCreatorSubmissionUploadUrlResponse = zod.object({
-  "uploadURL": zod.string().url(),
+  "uploadURL": zod.url(),
   "objectPath": zod.string()
 })
 
@@ -564,7 +631,7 @@ export const RequestCreatorSubmissionUploadUrlResponse = zod.object({
  * @summary Submit or resubmit project work
  */
 export const CreateCreatorCampaignSubmissionParams = zod.object({
-  "applicationId": zod.coerce.string().uuid()
+  "applicationId": zod.uuid()
 })
 
 export const createCreatorCampaignSubmissionBodyTitleMax = 160;
@@ -579,17 +646,17 @@ export const createCreatorCampaignSubmissionBodyCoverObjectPathMax = 512;
 
 export const CreateCreatorCampaignSubmissionBody = zod.object({
   "title": zod.string().min(1).max(createCreatorCampaignSubmissionBodyTitleMax),
-  "projectUrl": zod.string().url().max(createCreatorCampaignSubmissionBodyProjectUrlMax),
+  "projectUrl": zod.url().max(createCreatorCampaignSubmissionBodyProjectUrlMax),
   "description": zod.string().min(1).max(createCreatorCampaignSubmissionBodyDescriptionMax),
   "coverObjectPath": zod.string().max(createCreatorCampaignSubmissionBodyCoverObjectPathMax).nullish()
 })
 
 export const CreateCreatorCampaignSubmissionResponse = zod.object({
-  "id": zod.string().uuid(),
-  "applicationId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "applicationId": zod.uuid(),
   "attempt": zod.union([zod.literal(1),zod.literal(2)]),
   "title": zod.string(),
-  "projectUrl": zod.string().url(),
+  "projectUrl": zod.url(),
   "description": zod.string(),
   "coverUrl": zod.string().nullable(),
   "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']),
@@ -604,7 +671,7 @@ export const CreateCreatorCampaignSubmissionResponse = zod.object({
  * @summary Open the signed-in creator's private submission cover
  */
 export const GetCreatorSubmissionCoverParams = zod.object({
-  "submissionId": zod.coerce.string().uuid()
+  "submissionId": zod.uuid()
 })
 
 export const GetCreatorSubmissionCoverResponse = zod.unknown()
@@ -613,22 +680,34 @@ export const GetCreatorSubmissionCoverResponse = zod.unknown()
 /**
  * @summary List campaign project submissions for administrators
  */
+
+export const listAdminCampaignSubmissionsQuerySearchMax = 100;
+
+
+
 export const ListAdminCampaignSubmissionsQueryParams = zod.object({
-  "campaignId": zod.coerce.string().uuid().optional(),
-  "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']).optional()
+  "campaignId": zod.uuid().optional(),
+  "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']).optional(),
+  "page": zod.coerce.number().int().min(1).optional(),
+  "search": zod.string().max(listAdminCampaignSubmissionsQuerySearchMax).optional()
 })
 
 export const listAdminCampaignSubmissionsResponseSubmissionsItemTwoPlatformsItemFollowersMin = 0;
 
 
+export const listAdminCampaignSubmissionsResponsePaginationTotalMin = 0;
+
+export const listAdminCampaignSubmissionsResponsePaginationTotalPagesMin = 0;
+
+
 
 export const ListAdminCampaignSubmissionsResponse = zod.object({
   "submissions": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "applicationId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "applicationId": zod.uuid(),
   "attempt": zod.union([zod.literal(1),zod.literal(2)]),
   "title": zod.string(),
-  "projectUrl": zod.string().url(),
+  "projectUrl": zod.url(),
   "description": zod.string(),
   "coverUrl": zod.string().nullable(),
   "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']),
@@ -637,20 +716,26 @@ export const ListAdminCampaignSubmissionsResponse = zod.object({
   "reviewedAt": zod.coerce.date().nullable(),
   "canResubmit": zod.boolean()
 }).and(zod.object({
-  "campaignId": zod.string().uuid(),
+  "campaignId": zod.uuid(),
   "campaignTitle": zod.string(),
   "creatorName": zod.string(),
   "creatorCountry": zod.string(),
   "creatorNiche": zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other']),
   "platforms": zod.array(zod.object({
   "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
-  "url": zod.string().url(),
-  "followers": zod.number().int().min(listAdminCampaignSubmissionsResponseSubmissionsItemTwoPlatformsItemFollowersMin),
+  "url": zod.url(),
+  "followers": zod.int().min(listAdminCampaignSubmissionsResponseSubmissionsItemTwoPlatformsItemFollowersMin),
   "verified": zod.boolean()
 })),
   "isCurrent": zod.boolean(),
   "reviewedByName": zod.string().nullable()
-})))
+}))),
+  "pagination": zod.object({
+  "page": zod.int().min(1),
+  "pageSize": zod.literal(20),
+  "total": zod.int().min(listAdminCampaignSubmissionsResponsePaginationTotalMin),
+  "totalPages": zod.int().min(listAdminCampaignSubmissionsResponsePaginationTotalPagesMin)
+})
 })
 
 
@@ -658,7 +743,7 @@ export const ListAdminCampaignSubmissionsResponse = zod.object({
  * @summary Accept or reject a project submission
  */
 export const UpdateAdminCampaignSubmissionDecisionParams = zod.object({
-  "submissionId": zod.coerce.string().uuid()
+  "submissionId": zod.uuid()
 })
 
 export const updateAdminCampaignSubmissionDecisionBodyRejectionReasonMax = 500;
@@ -675,11 +760,11 @@ export const updateAdminCampaignSubmissionDecisionResponseTwoPlatformsItemFollow
 
 
 export const UpdateAdminCampaignSubmissionDecisionResponse = zod.object({
-  "id": zod.string().uuid(),
-  "applicationId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "applicationId": zod.uuid(),
   "attempt": zod.union([zod.literal(1),zod.literal(2)]),
   "title": zod.string(),
-  "projectUrl": zod.string().url(),
+  "projectUrl": zod.url(),
   "description": zod.string(),
   "coverUrl": zod.string().nullable(),
   "status": zod.enum(['SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED']),
@@ -688,15 +773,15 @@ export const UpdateAdminCampaignSubmissionDecisionResponse = zod.object({
   "reviewedAt": zod.coerce.date().nullable(),
   "canResubmit": zod.boolean()
 }).and(zod.object({
-  "campaignId": zod.string().uuid(),
+  "campaignId": zod.uuid(),
   "campaignTitle": zod.string(),
   "creatorName": zod.string(),
   "creatorCountry": zod.string(),
   "creatorNiche": zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other']),
   "platforms": zod.array(zod.object({
   "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
-  "url": zod.string().url(),
-  "followers": zod.number().int().min(updateAdminCampaignSubmissionDecisionResponseTwoPlatformsItemFollowersMin),
+  "url": zod.url(),
+  "followers": zod.int().min(updateAdminCampaignSubmissionDecisionResponseTwoPlatformsItemFollowersMin),
   "verified": zod.boolean()
 })),
   "isCurrent": zod.boolean(),
@@ -708,7 +793,7 @@ export const UpdateAdminCampaignSubmissionDecisionResponse = zod.object({
  * @summary Open a private campaign submission cover
  */
 export const GetAdminSubmissionCoverParams = zod.object({
-  "submissionId": zod.coerce.string().uuid()
+  "submissionId": zod.uuid()
 })
 
 export const GetAdminSubmissionCoverResponse = zod.unknown()
@@ -718,22 +803,37 @@ export const GetAdminSubmissionCoverResponse = zod.unknown()
  * Application records, creator profile details, and decision history for administrators.
  * @summary List campaign applications for administrators
  */
+
+export const listAdminCampaignApplicationsQuerySearchMax = 100;
+
+
+
+export const ListAdminCampaignApplicationsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional(),
+  "search": zod.string().max(listAdminCampaignApplicationsQuerySearchMax).optional()
+})
+
 export const listAdminCampaignApplicationsResponseApplicationsItemPlatformsItemFollowersMin = 0;
+
+
+export const listAdminCampaignApplicationsResponsePaginationTotalMin = 0;
+
+export const listAdminCampaignApplicationsResponsePaginationTotalPagesMin = 0;
 
 
 
 export const ListAdminCampaignApplicationsResponse = zod.object({
   "applications": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
   "campaignTitle": zod.string(),
   "creatorName": zod.string(),
   "creatorCountry": zod.string(),
   "creatorNiche": zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other']),
   "platforms": zod.array(zod.object({
   "platform": zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub']),
-  "url": zod.string().url(),
-  "followers": zod.number().int().min(listAdminCampaignApplicationsResponseApplicationsItemPlatformsItemFollowersMin),
+  "url": zod.url(),
+  "followers": zod.int().min(listAdminCampaignApplicationsResponseApplicationsItemPlatformsItemFollowersMin),
   "verified": zod.boolean()
 })),
   "personalMessage": zod.string(),
@@ -743,7 +843,7 @@ export const ListAdminCampaignApplicationsResponse = zod.object({
   "decidedByName": zod.string().nullable(),
   "decidedAt": zod.coerce.date().nullable(),
   "decisionHistory": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "previousStatus": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
   "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
   "rejectionReason": zod.union([zod.literal('FOLLOWERS_BELOW_REQUIREMENT'),zod.literal('NICHE_NOT_A_FIT'),zod.literal('PROFILE_INCOMPLETE'),zod.literal('APPLICATION_MESSAGE_TOO_WEAK'),zod.literal('TOO_MANY_APPLICANTS'),zod.literal('OTHER'),zod.literal(null)]).nullable(),
@@ -754,7 +854,13 @@ export const ListAdminCampaignApplicationsResponse = zod.object({
 })),
   "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
   "appliedAt": zod.coerce.date()
-}))
+})),
+  "pagination": zod.object({
+  "page": zod.int().min(1),
+  "pageSize": zod.literal(20),
+  "total": zod.int().min(listAdminCampaignApplicationsResponsePaginationTotalMin),
+  "totalPages": zod.int().min(listAdminCampaignApplicationsResponsePaginationTotalPagesMin)
+})
 })
 
 
@@ -763,7 +869,7 @@ export const ListAdminCampaignApplicationsResponse = zod.object({
  * @summary Accept, reject, or promote a campaign application
  */
 export const UpdateAdminCampaignApplicationDecisionParams = zod.object({
-  "applicationId": zod.coerce.string().uuid()
+  "applicationId": zod.uuid()
 })
 
 export const updateAdminCampaignApplicationDecisionBodyNoteMax = 500;
@@ -780,7 +886,7 @@ export const UpdateAdminCampaignApplicationDecisionBody = zod.object({
 })
 
 export const UpdateAdminCampaignApplicationDecisionResponse = zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "status": zod.enum(['UNDER_REVIEW', 'ACCEPTED', 'NOT_SELECTED', 'IN_PROGRESS', 'SUBMITTED', 'SUBMISSION_ACCEPTED', 'SUBMISSION_REJECTED', 'WINNER', 'PAID']),
   "rejectionReason": zod.union([zod.literal('FOLLOWERS_BELOW_REQUIREMENT'),zod.literal('NICHE_NOT_A_FIT'),zod.literal('PROFILE_INCOMPLETE'),zod.literal('APPLICATION_MESSAGE_TOO_WEAK'),zod.literal('TOO_MANY_APPLICANTS'),zod.literal('OTHER'),zod.literal(null)]).nullable(),
   "note": zod.string().nullable(),
@@ -792,16 +898,31 @@ export const UpdateAdminCampaignApplicationDecisionResponse = zod.object({
 /**
  * @summary List campaigns for administrators
  */
+
+export const listAdminCampaignsQuerySearchMax = 100;
+
+
+
+export const ListAdminCampaignsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional(),
+  "search": zod.string().max(listAdminCampaignsQuerySearchMax).optional()
+})
+
 export const listAdminCampaignsResponseCampaignsItemDeadlineRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
 export const listAdminCampaignsResponseCampaignsItemAllowedCountriesItemMax = 3;
 
 
 export const listAdminCampaignsResponseCampaignsItemAllowedCountriesItemRegExp = new RegExp('^(Any|[A-Z]{2})$');
 
+export const listAdminCampaignsResponsePaginationTotalMin = 0;
+
+export const listAdminCampaignsResponsePaginationTotalPagesMin = 0;
+
+
 
 export const ListAdminCampaignsResponse = zod.object({
   "campaigns": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "title": zod.string(),
   "organizerName": zod.string(),
   "shortDescription": zod.string(),
@@ -812,13 +933,20 @@ export const ListAdminCampaignsResponse = zod.object({
   "deadline": zod.string().regex(listAdminCampaignsResponseCampaignsItemDeadlineRegExp),
   "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
   "allowedCountries": zod.array(zod.string().max(listAdminCampaignsResponseCampaignsItemAllowedCountriesItemMax).regex(listAdminCampaignsResponseCampaignsItemAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
-  "minimumFollowers": zod.number().int(),
+  "minimumFollowers": zod.int(),
   "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
   "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "hasApplied": zod.boolean().optional(),
   "paymentRule": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
-}))
+})),
+  "pagination": zod.object({
+  "page": zod.int().min(1),
+  "pageSize": zod.literal(20),
+  "total": zod.int().min(listAdminCampaignsResponsePaginationTotalMin),
+  "totalPages": zod.int().min(listAdminCampaignsResponsePaginationTotalPagesMin)
+})
 })
 
 
@@ -872,7 +1000,7 @@ export const CreateAdminCampaignBody = zod.object({
   "deadline": zod.string().regex(createAdminCampaignBodyDeadlineRegExp),
   "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])).min(1).max(createAdminCampaignBodyAcceptedPlatformsMax),
   "allowedCountries": zod.array(zod.string().max(createAdminCampaignBodyAllowedCountriesItemMax).regex(createAdminCampaignBodyAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')).min(1).max(createAdminCampaignBodyAllowedCountriesMax),
-  "minimumFollowers": zod.number().int().min(createAdminCampaignBodyMinimumFollowersMin).max(createAdminCampaignBodyMinimumFollowersMax),
+  "minimumFollowers": zod.int().min(createAdminCampaignBodyMinimumFollowersMin).max(createAdminCampaignBodyMinimumFollowersMax),
   "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])).min(1).max(createAdminCampaignBodyNichesMax)
 })
 
@@ -884,7 +1012,7 @@ export const createAdminCampaignResponseAllowedCountriesItemRegExp = new RegExp(
 
 
 export const CreateAdminCampaignResponse = zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "title": zod.string(),
   "organizerName": zod.string(),
   "shortDescription": zod.string(),
@@ -895,9 +1023,10 @@ export const CreateAdminCampaignResponse = zod.object({
   "deadline": zod.string().regex(createAdminCampaignResponseDeadlineRegExp),
   "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
   "allowedCountries": zod.array(zod.string().max(createAdminCampaignResponseAllowedCountriesItemMax).regex(createAdminCampaignResponseAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
-  "minimumFollowers": zod.number().int(),
+  "minimumFollowers": zod.int(),
   "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
   "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "hasApplied": zod.boolean().optional(),
   "paymentRule": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -908,7 +1037,7 @@ export const CreateAdminCampaignResponse = zod.object({
  * @summary Edit campaign details
  */
 export const UpdateAdminCampaignParams = zod.object({
-  "campaignId": zod.coerce.string().uuid()
+  "campaignId": zod.uuid()
 })
 
 export const updateAdminCampaignBodyTitleMax = 160;
@@ -958,7 +1087,7 @@ export const UpdateAdminCampaignBody = zod.object({
   "deadline": zod.string().regex(updateAdminCampaignBodyDeadlineRegExp),
   "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])).min(1).max(updateAdminCampaignBodyAcceptedPlatformsMax),
   "allowedCountries": zod.array(zod.string().max(updateAdminCampaignBodyAllowedCountriesItemMax).regex(updateAdminCampaignBodyAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')).min(1).max(updateAdminCampaignBodyAllowedCountriesMax),
-  "minimumFollowers": zod.number().int().min(updateAdminCampaignBodyMinimumFollowersMin).max(updateAdminCampaignBodyMinimumFollowersMax),
+  "minimumFollowers": zod.int().min(updateAdminCampaignBodyMinimumFollowersMin).max(updateAdminCampaignBodyMinimumFollowersMax),
   "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])).min(1).max(updateAdminCampaignBodyNichesMax)
 })
 
@@ -970,7 +1099,7 @@ export const updateAdminCampaignResponseAllowedCountriesItemRegExp = new RegExp(
 
 
 export const UpdateAdminCampaignResponse = zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "title": zod.string(),
   "organizerName": zod.string(),
   "shortDescription": zod.string(),
@@ -981,9 +1110,10 @@ export const UpdateAdminCampaignResponse = zod.object({
   "deadline": zod.string().regex(updateAdminCampaignResponseDeadlineRegExp),
   "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
   "allowedCountries": zod.array(zod.string().max(updateAdminCampaignResponseAllowedCountriesItemMax).regex(updateAdminCampaignResponseAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
-  "minimumFollowers": zod.number().int(),
+  "minimumFollowers": zod.int(),
   "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
   "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "hasApplied": zod.boolean().optional(),
   "paymentRule": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -994,7 +1124,7 @@ export const UpdateAdminCampaignResponse = zod.object({
  * @summary Publish, unpublish, or close a campaign
  */
 export const UpdateAdminCampaignStatusParams = zod.object({
-  "campaignId": zod.coerce.string().uuid()
+  "campaignId": zod.uuid()
 })
 
 export const UpdateAdminCampaignStatusBody = zod.object({
@@ -1009,7 +1139,7 @@ export const updateAdminCampaignStatusResponseAllowedCountriesItemRegExp = new R
 
 
 export const UpdateAdminCampaignStatusResponse = zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "title": zod.string(),
   "organizerName": zod.string(),
   "shortDescription": zod.string(),
@@ -1020,9 +1150,10 @@ export const UpdateAdminCampaignStatusResponse = zod.object({
   "deadline": zod.string().regex(updateAdminCampaignStatusResponseDeadlineRegExp),
   "acceptedPlatforms": zod.array(zod.enum(['Instagram', 'YouTube', 'LinkedIn', 'X', 'TikTok', 'GitHub'])),
   "allowedCountries": zod.array(zod.string().max(updateAdminCampaignStatusResponseAllowedCountriesItemMax).regex(updateAdminCampaignStatusResponseAllowedCountriesItemRegExp).describe('ISO-style two-letter country code or Any')),
-  "minimumFollowers": zod.number().int(),
+  "minimumFollowers": zod.int(),
   "niches": zod.array(zod.enum(['Technology', 'AI', 'Developer tools', 'Gaming', 'Education', 'Business', 'Other'])),
   "status": zod.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
+  "hasApplied": zod.boolean().optional(),
   "paymentRule": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -1033,7 +1164,7 @@ export const UpdateAdminCampaignStatusResponse = zod.object({
  * @summary Request a private invoice or optional work-photo upload URL
  */
 export const RequestInvoiceUploadUrlParams = zod.object({
-  "applicationId": zod.coerce.string().uuid()
+  "applicationId": zod.uuid()
 })
 
 export const requestInvoiceUploadUrlBodyNameMax = 255;
@@ -1047,12 +1178,12 @@ export const requestInvoiceUploadUrlBodyContentTypeMax = 100;
 export const RequestInvoiceUploadUrlBody = zod.object({
   "kind": zod.enum(['INVOICE', 'WORK_PHOTO']),
   "name": zod.string().min(1).max(requestInvoiceUploadUrlBodyNameMax),
-  "size": zod.number().int().min(1).max(requestInvoiceUploadUrlBodySizeMax),
+  "size": zod.int().min(1).max(requestInvoiceUploadUrlBodySizeMax),
   "contentType": zod.string().min(1).max(requestInvoiceUploadUrlBodyContentTypeMax)
 })
 
 export const RequestInvoiceUploadUrlResponse = zod.object({
-  "uploadURL": zod.string().url(),
+  "uploadURL": zod.url(),
   "objectPath": zod.string()
 })
 
@@ -1061,7 +1192,7 @@ export const RequestInvoiceUploadUrlResponse = zod.object({
  * @summary Get campaign reward terms after project submission acceptance
  */
 export const GetCreatorInvoiceTermsParams = zod.object({
-  "applicationId": zod.coerce.string().uuid()
+  "applicationId": zod.uuid()
 })
 
 export const getCreatorInvoiceTermsResponseRewardAmountExclusiveMin = 0;
@@ -1079,7 +1210,7 @@ export const GetCreatorInvoiceTermsResponse = zod.object({
  * @summary Submit one invoice after the project submission is accepted
  */
 export const CreateCreatorInvoiceParams = zod.object({
-  "applicationId": zod.coerce.string().uuid()
+  "applicationId": zod.uuid()
 })
 
 export const createCreatorInvoiceBodyInvoiceNumberMax = 80;
@@ -1105,7 +1236,7 @@ export const CreateCreatorInvoiceBody = zod.object({
   "amount": zod.number().gt(createCreatorInvoiceBodyAmountExclusiveMin).multipleOf(createCreatorInvoiceBodyAmountMultipleOf),
   "currency": zod.string().regex(createCreatorInvoiceBodyCurrencyRegExp),
   "description": zod.string().min(1).max(createCreatorInvoiceBodyDescriptionMax),
-  "workUrl": zod.string().url().max(createCreatorInvoiceBodyWorkUrlMax),
+  "workUrl": zod.url().max(createCreatorInvoiceBodyWorkUrlMax),
   "invoiceObjectPath": zod.string().min(1).max(createCreatorInvoiceBodyInvoiceObjectPathMax),
   "workPhotoObjectPath": zod.string().max(createCreatorInvoiceBodyWorkPhotoObjectPathMax).nullish(),
   "confirmed": zod.literal(true)
@@ -1116,18 +1247,18 @@ export const createCreatorInvoiceResponseOnePaidDateRegExp = new RegExp('^[0-9]{
 
 
 export const CreateCreatorInvoiceResponse = zod.object({
-  "id": zod.string().uuid(),
-  "applicationId": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "applicationId": zod.uuid(),
+  "campaignId": zod.uuid(),
   "campaignTitle": zod.string(),
   "creatorName": zod.string(),
-  "creatorEmail": zod.string().email(),
+  "creatorEmail": zod.email(),
   "invoiceNumber": zod.string(),
   "invoiceDate": zod.string().regex(createCreatorInvoiceResponseOneInvoiceDateRegExp),
   "amount": zod.number(),
   "currency": zod.string(),
   "description": zod.string(),
-  "workUrl": zod.string().url(),
+  "workUrl": zod.url(),
   "hasWorkPhoto": zod.boolean(),
   "status": zod.enum(['PENDING', 'PAID']),
   "paidDate": zod.string().regex(createCreatorInvoiceResponseOnePaidDateRegExp).nullable(),
@@ -1139,54 +1270,90 @@ export const CreateCreatorInvoiceResponse = zod.object({
 /**
  * @summary List invoices belonging to the signed-in creator
  */
+
+export const listCreatorInvoicesQuerySearchMax = 100;
+
+
+
+export const ListCreatorInvoicesQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional(),
+  "search": zod.string().max(listCreatorInvoicesQuerySearchMax).optional()
+})
+
 export const listCreatorInvoicesResponseInvoicesItemOneInvoiceDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
 export const listCreatorInvoicesResponseInvoicesItemOnePaidDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+
+export const listCreatorInvoicesResponsePaginationTotalMin = 0;
+
+export const listCreatorInvoicesResponsePaginationTotalPagesMin = 0;
+
 
 
 export const ListCreatorInvoicesResponse = zod.object({
   "invoices": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "applicationId": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "applicationId": zod.uuid(),
+  "campaignId": zod.uuid(),
   "campaignTitle": zod.string(),
   "creatorName": zod.string(),
-  "creatorEmail": zod.string().email(),
+  "creatorEmail": zod.email(),
   "invoiceNumber": zod.string(),
   "invoiceDate": zod.string().regex(listCreatorInvoicesResponseInvoicesItemOneInvoiceDateRegExp),
   "amount": zod.number(),
   "currency": zod.string(),
   "description": zod.string(),
-  "workUrl": zod.string().url(),
+  "workUrl": zod.url(),
   "hasWorkPhoto": zod.boolean(),
   "status": zod.enum(['PENDING', 'PAID']),
   "paidDate": zod.string().regex(listCreatorInvoicesResponseInvoicesItemOnePaidDateRegExp).nullable(),
   "paidNote": zod.string().nullable(),
   "createdAt": zod.coerce.date()
-}))
+})),
+  "pagination": zod.object({
+  "page": zod.int().min(1),
+  "pageSize": zod.literal(20),
+  "total": zod.int().min(listCreatorInvoicesResponsePaginationTotalMin),
+  "totalPages": zod.int().min(listCreatorInvoicesResponsePaginationTotalPagesMin)
+})
 })
 
 
 /**
  * @summary List all submitted invoices for administrators
  */
+
+export const listAdminInvoicesQuerySearchMax = 100;
+
+
+
+export const ListAdminInvoicesQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional(),
+  "search": zod.string().max(listAdminInvoicesQuerySearchMax).optional()
+})
+
 export const listAdminInvoicesResponseInvoicesItemOneInvoiceDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
 export const listAdminInvoicesResponseInvoicesItemOnePaidDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+
+export const listAdminInvoicesResponsePaginationTotalMin = 0;
+
+export const listAdminInvoicesResponsePaginationTotalPagesMin = 0;
+
 
 
 export const ListAdminInvoicesResponse = zod.object({
   "invoices": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "applicationId": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "applicationId": zod.uuid(),
+  "campaignId": zod.uuid(),
   "campaignTitle": zod.string(),
   "creatorName": zod.string(),
-  "creatorEmail": zod.string().email(),
+  "creatorEmail": zod.email(),
   "invoiceNumber": zod.string(),
   "invoiceDate": zod.string().regex(listAdminInvoicesResponseInvoicesItemOneInvoiceDateRegExp),
   "amount": zod.number(),
   "currency": zod.string(),
   "description": zod.string(),
-  "workUrl": zod.string().url(),
+  "workUrl": zod.url(),
   "hasWorkPhoto": zod.boolean(),
   "status": zod.enum(['PENDING', 'PAID']),
   "paidDate": zod.string().regex(listAdminInvoicesResponseInvoicesItemOnePaidDateRegExp).nullable(),
@@ -1195,7 +1362,13 @@ export const ListAdminInvoicesResponse = zod.object({
 }).and(zod.object({
   "paidByName": zod.string().nullable(),
   "paidRecordedAt": zod.coerce.date().nullable()
-})))
+}))),
+  "pagination": zod.object({
+  "page": zod.int().min(1),
+  "pageSize": zod.literal(20),
+  "total": zod.int().min(listAdminInvoicesResponsePaginationTotalMin),
+  "totalPages": zod.int().min(listAdminInvoicesResponsePaginationTotalPagesMin)
+})
 })
 
 
@@ -1203,7 +1376,7 @@ export const ListAdminInvoicesResponse = zod.object({
  * @summary Record payment for a pending invoice
  */
 export const MarkAdminInvoicePaidParams = zod.object({
-  "invoiceId": zod.coerce.string().uuid()
+  "invoiceId": zod.uuid()
 })
 
 export const markAdminInvoicePaidBodyPaidDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
@@ -1221,18 +1394,18 @@ export const markAdminInvoicePaidResponseOnePaidDateRegExp = new RegExp('^[0-9]{
 
 
 export const MarkAdminInvoicePaidResponse = zod.object({
-  "id": zod.string().uuid(),
-  "applicationId": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "applicationId": zod.uuid(),
+  "campaignId": zod.uuid(),
   "campaignTitle": zod.string(),
   "creatorName": zod.string(),
-  "creatorEmail": zod.string().email(),
+  "creatorEmail": zod.email(),
   "invoiceNumber": zod.string(),
   "invoiceDate": zod.string().regex(markAdminInvoicePaidResponseOneInvoiceDateRegExp),
   "amount": zod.number(),
   "currency": zod.string(),
   "description": zod.string(),
-  "workUrl": zod.string().url(),
+  "workUrl": zod.url(),
   "hasWorkPhoto": zod.boolean(),
   "status": zod.enum(['PENDING', 'PAID']),
   "paidDate": zod.string().regex(markAdminInvoicePaidResponseOnePaidDateRegExp).nullable(),
@@ -1247,20 +1420,41 @@ export const MarkAdminInvoicePaidResponse = zod.object({
 /**
  * @summary List the latest transactional email attempts
  */
-export const listAdminEmailLogResponseEmailsMax = 100;
+
+export const listAdminEmailLogQuerySearchMax = 100;
+
+
+
+export const ListAdminEmailLogQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).optional(),
+  "search": zod.string().max(listAdminEmailLogQuerySearchMax).optional()
+})
+
+export const listAdminEmailLogResponseEmailsMax = 20;
+
+
+export const listAdminEmailLogResponsePaginationTotalMin = 0;
+
+export const listAdminEmailLogResponsePaginationTotalPagesMin = 0;
 
 
 
 export const ListAdminEmailLogResponse = zod.object({
   "emails": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "toEmail": zod.string(),
   "type": zod.string(),
   "subject": zod.string(),
   "status": zod.enum(['sent', 'failed', 'skipped']),
   "errorMessage": zod.string().nullable(),
   "createdAt": zod.coerce.date()
-})).max(listAdminEmailLogResponseEmailsMax)
+})).max(listAdminEmailLogResponseEmailsMax),
+  "pagination": zod.object({
+  "page": zod.int().min(1),
+  "pageSize": zod.literal(20),
+  "total": zod.int().min(listAdminEmailLogResponsePaginationTotalMin),
+  "totalPages": zod.int().min(listAdminEmailLogResponsePaginationTotalPagesMin)
+})
 })
 
 
@@ -1268,7 +1462,7 @@ export const ListAdminEmailLogResponse = zod.object({
  * @summary Send a test email to the signed-in administrator
  */
 export const SendAdminTestEmailResponse = zod.object({
-  "id": zod.string().uuid().nullable(),
+  "id": zod.uuid().nullable(),
   "status": zod.enum(['sent', 'failed', 'skipped']),
   "message": zod.string()
 })
@@ -1283,8 +1477,8 @@ export const unsubscribeFromCampaignAlertsQueryTokenMax = 128;
 
 
 export const UnsubscribeFromCampaignAlertsQueryParams = zod.object({
-  "userId": zod.coerce.string().uuid(),
-  "token": zod.coerce.string().min(unsubscribeFromCampaignAlertsQueryTokenMin).max(unsubscribeFromCampaignAlertsQueryTokenMax)
+  "userId": zod.uuid(),
+  "token": zod.string().min(unsubscribeFromCampaignAlertsQueryTokenMin).max(unsubscribeFromCampaignAlertsQueryTokenMax)
 })
 
 export const UnsubscribeFromCampaignAlertsResponse = zod.unknown()
@@ -1294,7 +1488,7 @@ export const UnsubscribeFromCampaignAlertsResponse = zod.unknown()
  * @summary Open an invoice file or work photo as its creator
  */
 export const GetCreatorInvoiceFileParams = zod.object({
-  "invoiceId": zod.coerce.string().uuid(),
+  "invoiceId": zod.uuid(),
   "fileKind": zod.enum(['invoice', 'work-photo'])
 })
 
@@ -1305,7 +1499,7 @@ export const GetCreatorInvoiceFileResponse = zod.unknown()
  * @summary Open an invoice file or work photo as an administrator
  */
 export const GetAdminInvoiceFileParams = zod.object({
-  "invoiceId": zod.coerce.string().uuid(),
+  "invoiceId": zod.uuid(),
   "fileKind": zod.enum(['invoice', 'work-photo'])
 })
 

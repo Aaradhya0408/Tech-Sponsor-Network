@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CreatorCampaignApplication } from './creatorCampaignApplication';
+import type { Pagination } from './pagination';
 
 export interface CreatorCampaignApplicationList {
   applications: CreatorCampaignApplication[];
+  pagination: Pagination;
 }

@@ -10,4 +10,12 @@ import type { CampaignSubmissionStatus } from './campaignSubmissionStatus';
 export type ListAdminCampaignSubmissionsParams = {
 campaignId?: string;
 status?: CampaignSubmissionStatus;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @maxLength 100
+ */
+search?: string;
 };

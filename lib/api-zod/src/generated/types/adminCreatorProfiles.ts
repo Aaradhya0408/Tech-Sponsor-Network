@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminCreatorProfile } from './adminCreatorProfile';
+import type { Pagination } from './pagination';
 
 export interface AdminCreatorProfiles {
   creators: AdminCreatorProfile[];
+  pagination: Pagination;
 }

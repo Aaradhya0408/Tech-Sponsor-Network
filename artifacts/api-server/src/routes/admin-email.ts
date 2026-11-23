@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import {
   ListAdminEmailLogResponse,
   SendAdminTestEmailResponse,
@@ -14,6 +14,7 @@ import {
   renderUnsubscribeResult,
 } from "../lib/email-template";
 import { requireRole } from "./auth";
+import { escapeLike, LIST_PAGE_SIZE, paginationFor, readListQuery } from "../lib/list-query";
 
 const router: IRouter = Router();
 
@@ -26,12 +27,35 @@ function invalidUnsubscribe(res: Response): void {
 router.get(
   "/admin/email-log",
   requireRole("ADMIN"),
-  async (_req, res): Promise<void> => {
-    const rows = await db
-      .select()
-      .from(emailLogTable)
-      .orderBy(desc(emailLogTable.createdAt))
-      .limit(100);
+  async (req, res): Promise<void> => {
+    const list = readListQuery(req, res);
+    if (!list) return;
+    const search = list.search ? `%${escapeLike(list.search)}%` : null;
+    const where = search
+      ? or(
+          ilike(emailLogTable.toEmail, search),
+          ilike(emailLogTable.type, search),
+          ilike(emailLogTable.subject, search),
+          ilike(emailLogTable.status, search),
+        )
+      : undefined;
+    const [{ total }] = where
+      ? await db.select({ total: count() }).from(emailLogTable).where(where)
+      : await db.select({ total: count() }).from(emailLogTable);
+    const rows = where
+      ? await db
+          .select()
+          .from(emailLogTable)
+          .where(where)
+          .orderBy(desc(emailLogTable.createdAt))
+          .limit(LIST_PAGE_SIZE)
+          .offset(list.offset)
+      : await db
+          .select()
+          .from(emailLogTable)
+          .orderBy(desc(emailLogTable.createdAt))
+          .limit(LIST_PAGE_SIZE)
+          .offset(list.offset);
     res.json(
       ListAdminEmailLogResponse.parse({
         emails: rows.map((row) => ({
@@ -43,6 +67,7 @@ router.get(
           errorMessage: row.errorMessage,
           createdAt: row.createdAt,
         })),
+        pagination: paginationFor(list.page, total),
       }),
     );
   },

@@ -11,10 +11,7 @@ import {
   getGetCreatorInvoiceTermsQueryKey,
   getListCreatorInvoicesQueryKey,
   getListAdminInvoicesQueryKey,
-  getListAdminCampaignApplicationsQueryKey,
-  useListAdminCampaignApplications,
   useGetCurrentUser,
-  useListCreatorApplications,
   useGetCreatorInvoiceTerms,
   useListCreatorInvoices,
   useRequestInvoiceUploadUrl,
@@ -25,6 +22,7 @@ import {
 import type { AdminInvoice, CreatorCampaignApplication, CreatorInvoice, InvoiceInput } from '@workspace/api-client-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ResponsiveNav } from '@/components/responsive-nav';
+import { ListPagination } from '@/components/list-pagination';
 
 const invoiceSchema = z.object({
   invoiceNumber: z.string().trim().min(1, 'Enter an invoice number.').max(80),
@@ -158,7 +156,7 @@ function CreatorInvoiceForm({ application, currency, rewardAmount, email, accoun
         queryClient.invalidateQueries({ queryKey: getListCreatorInvoicesQueryKey() }),
         queryClient.invalidateQueries({ queryKey: getListCreatorApplicationsQueryKey() }),
         queryClient.invalidateQueries({ queryKey: getListAdminInvoicesQueryKey() }),
-        queryClient.invalidateQueries({ queryKey: getListAdminCampaignApplicationsQueryKey() }),
+        queryClient.invalidateQueries({ predicate: query => String(query.queryKey[0] ?? '').includes('/api/admin/applications') }),
       ]);
       onDone();
     } catch (error) {
@@ -206,16 +204,21 @@ function CreatorInvoiceCard({ invoice }: { invoice: CreatorInvoice }) {
 
 export function CreatorInvoiceSection({ applications, email, accountName }: { applications: CreatorCampaignApplication[]; email: string; accountName: string }) {
   const eligible = applications.filter(application => application.status === 'SUBMISSION_ACCEPTED' || application.status === 'WINNER' || application.status === 'PAID');
-  const invoiceQuery = useListCreatorInvoices({ query: { queryKey: getListCreatorInvoicesQueryKey(), enabled: eligible.length > 0, retry: false } });
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const invoiceParams = { page, search };
+  const invoiceQuery = useListCreatorInvoices(invoiceParams, { query: { queryKey: getListCreatorInvoicesQueryKey(invoiceParams), enabled: eligible.length > 0, retry: false } });
   const invoices = invoiceQuery.data?.invoices ?? [];
   const invoiceByApplication = useMemo(() => new Map(invoices.map(invoice => [invoice.applicationId, invoice])), [invoices]);
   if (!eligible.length) return null;
   return <section className="mt-12 border-t border-border/80 pt-9" data-testid="section-creator-invoices">
-    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><div className="eyebrow flex items-center gap-2 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Campaign paperwork</div><h2 className="serif mt-2 text-3xl font-semibold tracking-[-.05em]">Invoices.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Submit paperwork for accepted work and keep track of its payment status.</p></div><span data-testid="text-creator-invoice-count" className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-semibold text-muted-foreground"><ReceiptText size={14} className="text-primary" />{invoiceQuery.isLoading ? 'Loading invoices' : `${invoices.length} ${invoices.length === 1 ? 'invoice' : 'invoices'}`}</span></div>
+     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><div className="eyebrow flex items-center gap-2 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Campaign paperwork</div><h2 className="serif mt-2 text-3xl font-semibold tracking-[-.05em]">Invoices.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Submit paperwork for accepted work and keep track of its payment status.</p></div><span data-testid="text-creator-invoice-count" className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-semibold text-muted-foreground"><ReceiptText size={14} className="text-primary" />{invoiceQuery.isLoading ? 'Loading invoices' : `${invoiceQuery.data?.pagination.total ?? invoices.length} ${invoiceQuery.data?.pagination.total === 1 ? 'invoice' : 'invoices'}`}</span></div>
+    <label className="mt-5 block"><span className="sr-only">Search invoices</span><input className="field w-full sm:max-w-sm" maxLength={100} value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Search invoices" /></label>
     {invoiceQuery.isLoading ? <div data-testid="loading-creator-invoices" className="mt-5 space-y-3"><div className="h-28 animate-pulse rounded-2xl border border-border bg-card/70" /><div className="h-28 animate-pulse rounded-2xl border border-border bg-card/70" /></div>
       : invoiceQuery.isError ? <div role="alert" data-testid="status-creator-invoices-error" className="mt-5 rounded-2xl border border-[#e3c2bb] bg-card p-5"><p className="text-sm font-semibold text-[#8f463d]">Your invoices couldn’t be loaded.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{messageOf(invoiceQuery.error)}</p><button type="button" onClick={() => invoiceQuery.refetch()} data-testid="button-retry-creator-invoices" className="mt-3 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">Try again</button></div>
        : invoices.length ? <div className="mt-5 space-y-3" data-testid="list-creator-invoices">{invoices.map(invoice => <CreatorInvoiceCard key={invoice.id} invoice={invoice} />)}</div>
-        : <div data-testid="empty-creator-invoices" className="mt-5 rounded-2xl border border-dashed border-border bg-card/60 px-5 py-7"><p className="text-sm font-semibold">No invoices submitted yet.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Once you send an invoice, its status and records will appear here.</p><Link href={eligible.length ? '#list-invoice-eligible-applications' : '/campaigns'} className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-primary hover:bg-muted">{eligible.length ? 'Review accepted work' : 'Browse campaigns'}</Link></div>}
+         : <div data-testid="empty-creator-invoices" className="mt-5 rounded-2xl border border-dashed border-border bg-card/60 px-5 py-7"><p className="text-sm font-semibold">{search ? 'No invoices match this search.' : 'No invoices submitted yet.'}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{search ? 'Try a different invoice number or campaign name.' : 'Once you send an invoice, its status and records will appear here.'}</p>{search ? <button type="button" onClick={() => setSearch('')} className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-primary hover:bg-muted">Clear search</button> : <Link href={eligible.length ? '#list-invoice-eligible-applications' : '/campaigns'} className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-primary hover:bg-muted">{eligible.length ? 'Review accepted work' : 'Browse campaigns'}</Link>}</div>}
+    <ListPagination pagination={invoiceQuery.data?.pagination} onPageChange={setPage} className="mt-4" />
     {!!eligible.length && <div id="list-invoice-eligible-applications" className="mt-7 space-y-3" data-testid="list-invoice-eligible-applications">
       <h3 className="eyebrow text-muted-foreground">Ready for invoicing</h3>
       {eligible.map(application => <CreatorInvoiceEligibleCard key={application.id} application={application} invoice={invoiceByApplication.get(application.id)} email={email} accountName={accountName} canSubmit={application.status !== 'PAID' && !invoiceQuery.isLoading && !invoiceQuery.isError} />)}
@@ -258,7 +261,7 @@ function MarkPaidForm({ invoice, onCancel, onDone }: { invoice: AdminInvoice; on
         queryClient.invalidateQueries({ queryKey: getListAdminInvoicesQueryKey() }),
         queryClient.invalidateQueries({ queryKey: getListCreatorInvoicesQueryKey() }),
         queryClient.invalidateQueries({ queryKey: getListCreatorApplicationsQueryKey() }),
-        queryClient.invalidateQueries({ queryKey: getListAdminCampaignApplicationsQueryKey() }),
+        queryClient.invalidateQueries({ predicate: query => String(query.queryKey[0] ?? '').includes('/api/admin/applications') }),
       ]);
       onDone();
     } catch (problem) {
@@ -301,8 +304,10 @@ function AdminInvoiceCard({ invoice, allowActions }: { invoice: AdminInvoice; al
 export function AdminInvoicesPage() {
   const [, setLocation] = useLocation();
   const current = useGetCurrentUser({ query: { queryKey: getGetCurrentUserQueryKey(), retry: false } });
-  const invoicesQuery = useListAdminInvoices({ query: { queryKey: getListAdminInvoicesQueryKey(), enabled: !!current.data && current.data.role === 'ADMIN', retry: false } });
-  const applicationsQuery = useListAdminCampaignApplications({ query: { queryKey: getListAdminCampaignApplicationsQueryKey(), enabled: !!current.data && current.data.role === 'ADMIN', retry: false } });
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const invoiceParams = { page, search };
+  const invoicesQuery = useListAdminInvoices(invoiceParams, { query: { queryKey: getListAdminInvoicesQueryKey(invoiceParams), enabled: !!current.data && current.data.role === 'ADMIN', retry: false } });
   useEffect(() => {
     if (current.isError) setLocation('/login');
     else if (current.data && current.data.role !== 'ADMIN') setLocation('/dashboard');
@@ -310,17 +315,15 @@ export function AdminInvoicesPage() {
   if (current.isLoading || (!current.data && !current.isError)) return <main className="min-h-[100dvh] bg-background"><AdminInvoiceHeader /><section className="mx-auto max-w-[1120px] px-5 py-10 sm:px-9"><InvoiceSkeleton /></section></main>;
   if (current.isError || current.data?.role !== 'ADMIN') return null;
   const invoices = invoicesQuery.data?.invoices ?? [];
-  const invoiceActionApplicationIds = new Set((applicationsQuery.data?.applications ?? [])
-    .filter(application => application.status === 'SUBMISSION_ACCEPTED' || application.status === 'WINNER')
-    .map(application => application.id));
   return <main className="min-h-[100dvh] bg-background">
     <AdminInvoiceHeader />
     <section className="mx-auto max-w-[1120px] px-5 py-8 sm:px-9 sm:py-12">
-      <div className="page-enter"><div className="eyebrow flex items-center gap-2 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Administrator workspace</div><div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><h1 className="serif text-4xl font-semibold tracking-[-.06em] sm:text-5xl">Invoice register.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Review creator paperwork and record completed payments.</p></div><span data-testid="text-admin-invoice-count" className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold text-muted-foreground"><ReceiptText size={14} className="text-primary" />{invoicesQuery.isLoading ? 'Loading invoices' : `${invoices.length} ${invoices.length === 1 ? 'invoice' : 'invoices'}`}</span></div></div>
+      <div className="page-enter"><div className="eyebrow flex items-center gap-2 text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Administrator workspace</div><div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><h1 className="serif text-4xl font-semibold tracking-[-.06em] sm:text-5xl">Invoice register.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Review creator paperwork and record completed payments.</p></div><span data-testid="text-admin-invoice-count" className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold text-muted-foreground"><ReceiptText size={14} className="text-primary" />{invoicesQuery.isLoading ? 'Loading invoices' : `${invoicesQuery.data?.pagination.total ?? invoices.length} ${invoicesQuery.data?.pagination.total === 1 ? 'invoice' : 'invoices'}`}</span></div></div>
+      <label className="mt-6 block"><span className="sr-only">Search invoices</span><input className="field w-full sm:max-w-sm" maxLength={100} value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Search creator, campaign, invoice" /></label>
       {invoicesQuery.isLoading ? <InvoiceSkeleton /> : invoicesQuery.isError ? <div role="alert" data-testid="status-admin-invoices-error" className="mt-7 rounded-2xl border border-[#e3c2bb] bg-card p-6"><p className="text-sm font-semibold text-[#8f463d]">The invoice register couldn’t be loaded.</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{messageOf(invoicesQuery.error)}</p><button type="button" onClick={() => invoicesQuery.refetch()} data-testid="button-retry-admin-invoices" className="mt-4 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Try again</button></div>
-        : !invoices.length ? <div data-testid="empty-admin-invoices" className="mt-7 rounded-[24px] border border-dashed border-border bg-card/70 px-6 py-14 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><ReceiptText size={20} /></div><div className="eyebrow mt-5 text-primary">No invoices received</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">The payment register is clear.</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Submitted creator invoices will be listed here for review.</p><Link href="/admin/applications" className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground">View applications</Link></div>
-          : <div data-testid="list-admin-invoices" className="mt-7 space-y-3">{invoices.map(invoice => <AdminInvoiceCard key={invoice.id} invoice={invoice} allowActions={!applicationsQuery.isLoading && !applicationsQuery.isError && invoiceActionApplicationIds.has(invoice.applicationId)} />)}</div>}
-      {applicationsQuery.isError && invoices.length > 0 && <div role="alert" data-testid="status-admin-invoice-action-eligibility-error" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e3c2bb] bg-[#f7e9e6] p-3 text-xs text-[#8f463d]"><span>Invoice actions are hidden until submission eligibility can be confirmed.</span><button type="button" onClick={() => applicationsQuery.refetch()} data-testid="button-retry-admin-invoice-eligibility" className="font-semibold underline">Try again</button></div>}
+        : !invoices.length ? <div data-testid="empty-admin-invoices" className="mt-7 rounded-[24px] border border-dashed border-border bg-card/70 px-6 py-14 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e9e9df] text-primary"><ReceiptText size={20} /></div><div className="eyebrow mt-5 text-primary">{search ? 'No matches' : 'No invoices received'}</div><h2 className="serif mt-2 text-2xl font-semibold tracking-[-.04em]">{search ? 'No invoices match this search.' : 'The payment register is clear.'}</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{search ? 'Try another creator, campaign, or invoice number.' : 'Submitted creator invoices will be listed here for review.'}</p>{search ? <button type="button" onClick={() => setSearch('')} className="mt-5 inline-flex min-h-11 items-center rounded-full border border-border px-5 py-3 text-sm font-semibold text-primary">Clear search</button> : <Link href="/admin/applications" className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground">View applications</Link>}</div>
+          : <div data-testid="list-admin-invoices" className="mt-7 space-y-3">{invoices.map(invoice => <AdminInvoiceCard key={invoice.id} invoice={invoice} allowActions={invoice.status === 'PENDING'} />)}</div>}
+      <ListPagination pagination={invoicesQuery.data?.pagination} onPageChange={setPage} className="mt-4" />
     </section>
     <footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">Tech Sponsor Network <span className="px-2">·</span> Invoice register</footer>
   </main>;

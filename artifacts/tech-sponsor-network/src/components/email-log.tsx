@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-client-react";
 import type { AdminEmailLogEntry } from "@workspace/api-client-react";
 import { ResponsiveNav } from "@/components/responsive-nav";
+import { ListPagination } from "@/components/list-pagination";
 
 function dateTime(value: string): string {
   const date = new Date(value);
@@ -37,9 +38,12 @@ export function AdminEmailLogPage() {
   const current = useGetCurrentUser({
     query: { queryKey: getGetCurrentUserQueryKey(), retry: false },
   });
-  const logQuery = useListAdminEmailLog({
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const listParams = { page, search };
+  const logQuery = useListAdminEmailLog(listParams, {
     query: {
-      queryKey: getListAdminEmailLogQueryKey(),
+      queryKey: getListAdminEmailLogQueryKey(listParams),
       enabled: !!current.data && current.data.role === "ADMIN",
       retry: false,
       refetchInterval: 15_000,
@@ -77,7 +81,7 @@ export function AdminEmailLogPage() {
       setFeedback(result.message);
       setFeedbackError(result.status !== "sent");
       await queryClient.invalidateQueries({
-        queryKey: getListAdminEmailLogQueryKey(),
+        queryKey: getListAdminEmailLogQueryKey(listParams),
       });
     } catch {
       setFeedback("The test email could not be attempted. Check the email log.");
@@ -134,6 +138,7 @@ export function AdminEmailLogPage() {
           )}
         </div>
 
+        <label className="mt-6 block"><span className="sr-only">Search email log</span><input className="field w-full sm:max-w-sm" maxLength={100} value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Search recipients, subjects, status" /></label>
         <div className="mt-7 overflow-hidden rounded-[22px] border border-border bg-card">
           {logQuery.isLoading ? (
             <div
@@ -234,8 +239,9 @@ export function AdminEmailLogPage() {
             </div>
           )}
         </div>
+        <ListPagination pagination={logQuery.data?.pagination} onPageChange={setPage} className="mt-4" />
         <p className="mt-3 text-xs text-muted-foreground">
-          Showing up to 100 most recent attempts. The list refreshes automatically.
+          Showing 20 email attempts per page. The list refreshes automatically.
         </p>
       </section>
       <footer className="border-t border-border/80 px-5 py-6 text-center text-xs text-muted-foreground">
